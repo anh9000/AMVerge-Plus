@@ -1,17 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { VscLoading } from "react-icons/vsc";
 
 // --------------------
 //     Types/Props
 // --------------------
-
-// defines a clip object
-type Clip = {
-  id: string;
-  src: string;
-};
-
-// list of clips
 
 // called whenever a clip should be previewed
 type ClipContainerProps = {
@@ -25,6 +18,8 @@ type ClipContainerProps = {
   >;
   selectedClips: Set<string>;
   clips: { id: string; src: string }[];
+  importToken: string;
+  loading: boolean;
 };
 
 // --------------------
@@ -90,8 +85,11 @@ export default function ClipsContainer(props: ClipContainerProps) {
             gridTemplateColumns: `repeat(${props.cols}, minmax(0, 1fr))`
           }}
         >
-          
-        {props.clips.map((clip, index) => (
+        { props.loading 
+          ? Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="clip-skeleton" />
+          ))
+          : props.clips.map((clip, index) => (
           <div
             key={clip.id}
             // Apply green outline when selected
@@ -107,7 +105,8 @@ export default function ClipsContainer(props: ClipContainerProps) {
             */}
             <video
               className="clip"
-              src={convertFileSrc(clip.src)}
+              // convertFileSrc converts it to an http which makes it accessible
+              src={`${convertFileSrc(clip.src)}?v=${props.importToken}`}
               muted
               loop
               preload="metadata"

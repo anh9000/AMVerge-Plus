@@ -120,3 +120,8 @@ def merge_short_scenes(boundaries, min_duration=0.5):
         merged.append(t)
 
     return merged
+
+def emit_progress(percent: int, message: str):
+    import sys
+    percent = max(0, min(100, int(percent)))
+    print(f"PROGRESS|{percent}|{message}", file=sys.stderr, flush=True)

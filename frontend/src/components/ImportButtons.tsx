@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
 type ImportButtonsProps = {
   cols: number;
   gridSize: number;
@@ -11,7 +9,6 @@ type ImportButtonsProps = {
   setSelectedClips: React.Dispatch<
     React.SetStateAction<Set<string>>
   >;
-  onDetect: () => void;
   onImport: () => void;
   loading: boolean;
 };

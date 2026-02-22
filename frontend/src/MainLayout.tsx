@@ -12,6 +12,8 @@ type LayoutProps = {
         React.SetStateAction<Set<string>>
     >;
     clips: { id: string; src: string }[];
+    importToken: string;
+    loading: boolean;
 };
 export default function MainLayout(props: LayoutProps) {
     const [leftWidth, setLeftWidth] = useState(65);
@@ -24,14 +26,6 @@ export default function MainLayout(props: LayoutProps) {
     */
     const startResize = (e: React.MouseEvent<HTMLDivElement>) => {
         const startX = e.clientX;
-
-        /*
-        The container is located below in the HTML portion of this file
-        container (.split-layout)
-        ├─ leftPane
-        ├─ divider
-        └─ rightPane
-        */
         const container = e.currentTarget.parentElement as HTMLElement;
         const leftPane = container.children[0] as HTMLElement;
 
@@ -67,7 +61,9 @@ export default function MainLayout(props: LayoutProps) {
                  gridPreview={props.gridPreview}
                  selectedClips={props.selectedClips}
                  setSelectedClips={props.setSelectedClips}
-                 clips={props.clips}/>
+                 clips={props.clips}
+                 importToken={props.importToken}
+                 loading={props.loading}/>
             </div>
             
             <div

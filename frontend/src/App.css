@@ -51,6 +51,72 @@ main {
 }
 
 /* --------------------
+    LOADING OVERLAY
+-------------------- */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  flex-direction: column;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(255, 255, 255, 0.2);
+  border-top: 6px solid #00ff88;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 5px;
+  text-align: center;
+}
+
+.progress-bar {
+  margin-top: 5px;
+  width: 150px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #00ff88;
+  transition: width 0.2s ease;
+}
+
+.clip-skeleton {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #222 25%,
+    #035500 37%,
+    #222 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0 }
+  100% { background-position: 0 0 }
+}
+/* --------------------
         NAVBAR
 -------------------- */
 .navbar {

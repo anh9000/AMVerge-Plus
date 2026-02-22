@@ -6,7 +6,7 @@ import cv2
 import av
 import sys
 import json
-from utils import generate_keyframes, keyframe_windows, merge_short_scenes
+from utils import generate_keyframes, keyframe_windows, merge_short_scenes, emit_progress
 #-----------------------------
 #   SCENEDETECT ALGORITHM
 #-----------------------------
@@ -118,17 +118,21 @@ def detect_and_trim_scenes(
 ):
     os.makedirs(output_dir, exist_ok=True)
 
-    print("Generating keyframes..", file=sys.stderr)
+    emit_progress(10, "Capturing key areas..")
     keyframes = generate_keyframes(original_video_path)
     if not keyframes:
         return []
-    
-    print("Generating keyframe windows..", file=sys.stderr)
     windows = keyframe_windows(keyframes, radius)
     
     all_cut_timestamps = []
 
-    for start, end in windows:
+    emit_progress(30, "Scanning for scene cuts...")
+    total_windows = max(1, len(windows))
+
+    for i, (start, end) in enumerate(windows):
+        percent = 30 + int(40 * (i / total_windows))
+        emit_progress(percent, f"Scanning window {i+1}/{total_windows}")
+
         window_cuts = read_frames(
             original_video_path,
             start,
@@ -139,7 +143,6 @@ def detect_and_trim_scenes(
 
         all_cut_timestamps.extend(window_cuts)
 
-    # remove duplicated cuts and sort
     all_cut_timestamps = sorted(set(all_cut_timestamps))
 
     duration_cmd = [
@@ -149,6 +152,7 @@ def detect_and_trim_scenes(
         "-of", "csv=p=0"
     ]
 
+    emit_progress(70, "Finalizing scene boundaries")
     result = subprocess.run(duration_cmd, stdout=subprocess.PIPE, text=True)
     duration = float(result.stdout.strip())
 
@@ -160,13 +164,16 @@ def detect_and_trim_scenes(
     final_scenes = []
     scene_idx = 0
 
-    print("Cutting final scenes..", file=sys.stderr)
-    for i in range(len(scene_boundaries) - 1):
+    emit_progress(80, "Cutting scenes..")
+    total_scenes = max(1, len(scene_boundaries) - 1)
+    for i in range(total_scenes):
+        percent = 80 + int(20 * (i / total_scenes))
+        emit_progress(percent, f"Exporting clip {i+1}/{total_scenes}")
+
         start = scene_boundaries[i]
         end = scene_boundaries[i + 1]
 
         if start >= end:
-            print(f"Detected duplicate timestamps: {start}, {end}", file=sys.stderr)
             continue
 
         out_path = os.path.join(output_dir, f"scene_{scene_idx:04d}.mp4")
@@ -193,19 +200,20 @@ def detect_and_trim_scenes(
         })
 
         scene_idx += 1
-
+    emit_progress(100, "Done")
     return final_scenes
 
 if __name__ == "__main__":
     input_file = sys.argv[1]
     threshold = float(sys.argv[2])
-    output_dir = sys.argv[3]
-
+    blocksize = int(sys.argv[3])
+    output_dir = sys.argv[4]
     scenes = detect_and_trim_scenes(
         original_video_path=input_file,
         threshold=threshold,
+        blocksize=blocksize,
         output_dir=output_dir
     )
 
     print("About to print JSON", file=sys.stderr)
-    print(json.dumps(scenes))
+    print(json.dumps(scenes)) # sends to stdout for rust to collect, react parses it
