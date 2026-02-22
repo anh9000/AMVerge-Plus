@@ -1,14 +1,6 @@
-import Thumb from "../assets/thumb_test.png";
-import clip1 from "../assets/clip1.mp4";
-import clip2 from "../assets/clip2.mp4";
-import clip3 from "../assets/clip3.mp4";
-import clip4 from "../assets/clip4.mp4";
-import clip5 from "../assets/clip5.mp4";
-import clip6 from "../assets/clip6.mp4";
-import clip7 from "../assets/clip7.mp4";
-import clip8 from "../assets/clip8.mp4";
-import clip9 from "../assets/clip9.mp4";
 import { useState, useRef, useEffect } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
+
 // --------------------
 //     Types/Props
 // --------------------
@@ -20,17 +12,6 @@ type Clip = {
 };
 
 // list of clips
-const clips: Clip[] = [
-  { id: "1", src: clip1 },
-  { id: "2", src: clip2 },
-  { id: "3", src: clip3 },
-  { id: "4", src: clip4 },
-  { id: "5", src: clip5 },
-  { id: "6", src: clip6 },
-  { id: "7", src: clip7 },
-  { id: "8", src: clip8 },
-  { id: "9", src: clip9 },
-];
 
 // called whenever a clip should be previewed
 type ClipContainerProps = {
@@ -43,6 +24,7 @@ type ClipContainerProps = {
     React.SetStateAction<Set<string>>
   >;
   selectedClips: Set<string>;
+  clips: { id: string; src: string }[];
 };
 
 // --------------------
@@ -72,14 +54,14 @@ export default function ClipsContainer(props: ClipContainerProps) {
 
   // Selects range of clips
   const selectRange = (id: string) => {
-    const currentIndex = clips.findIndex(c => c.id === id);
+    const currentIndex = props.clips.findIndex(c => c.id === id);
     if (lastSelectedIndex === null) return;
 
     const [start, end] = [lastSelectedIndex, currentIndex].sort(
       (a, b) => a - b
     );
 
-    const range = clips.slice(start, end + 1).map(c => c.id);
+    const range = props.clips.slice(start, end + 1).map(c => c.id);
     props.setSelectedClips(new Set(range));
   };
 
@@ -109,7 +91,7 @@ export default function ClipsContainer(props: ClipContainerProps) {
           }}
         >
           
-        {clips.map((clip, index) => (
+        {props.clips.map((clip, index) => (
           <div
             key={clip.id}
             // Apply green outline when selected
@@ -125,7 +107,7 @@ export default function ClipsContainer(props: ClipContainerProps) {
             */}
             <video
               className="clip"
-              src={clip.src}
+              src={convertFileSrc(clip.src)}
               muted
               loop
               preload="metadata"

@@ -6,6 +6,8 @@ import {
     FaVolumeUp,
     FaExpand
 } from "react-icons/fa";
+import { convertFileSrc } from "@tauri-apps/api/core";
+
 type VideoPlayerProps = {
   selectedClip: string;
 };
@@ -168,7 +170,7 @@ export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
             <div className="video-frame">
                 <video
                     ref={videoRef}
-                    src={selectedClip}
+                    src={convertFileSrc(selectedClip)}
                     preload="metadata"
                     onLoadedMetadata={(e) => {
                         const video = e.currentTarget;

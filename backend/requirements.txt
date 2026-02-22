@@ -24,3 +24,5 @@ pillow>=10.0
 scipy>=1.11
 
 opencv-python
+
+av

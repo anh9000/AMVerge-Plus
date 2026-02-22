@@ -11,7 +11,7 @@ type LayoutProps = {
     setSelectedClips: React.Dispatch<
         React.SetStateAction<Set<string>>
     >;
-
+    clips: { id: string; src: string }[];
 };
 export default function MainLayout(props: LayoutProps) {
     const [leftWidth, setLeftWidth] = useState(65);
@@ -66,7 +66,8 @@ export default function MainLayout(props: LayoutProps) {
                  cols={props.cols}
                  gridPreview={props.gridPreview}
                  selectedClips={props.selectedClips}
-                 setSelectedClips={props.setSelectedClips}/>
+                 setSelectedClips={props.setSelectedClips}
+                 clips={props.clips}/>
             </div>
             
             <div
