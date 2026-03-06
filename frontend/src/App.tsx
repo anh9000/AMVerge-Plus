@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import ImportButtons from "./components/ImportButtons";
@@ -22,6 +23,7 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("Starting..."); 
   const [isEmpty, setIsEmpty] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const width = gridRef.current?.offsetWidth || 0;
   const gridSize = Math.floor(width / cols);
@@ -49,8 +51,7 @@ function App() {
     }));
   };
 
-  const handleImport = async () => {
-    // This opens the file dialog to select a video file
+  const onImportClick = async () => {
     const file = await open({
       multiple: false,
       filters: [
@@ -60,7 +61,10 @@ function App() {
         }
       ]
     });
-
+    handleImport(file)
+  }
+  const handleImport = async (file: string | null) => {
+    // This opens the file dialog to select a video file
     if (!file) return;
 
     try {
@@ -119,6 +123,7 @@ function App() {
     setCols(c => Math.min(12, c + 1));
   };
 
+  // loading effect
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
@@ -134,6 +139,44 @@ function App() {
     })();
     return () => {
       if (unlisten) unlisten();
+    };
+  }, []);
+
+
+  // drag & drop files effect
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+
+    const init = async () => {
+      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+        if (event.payload.type === 'over') {
+
+          setIsDragging(true);
+
+        } 
+        
+        else if (event.payload.type === "drop") {
+          setIsDragging(false);
+
+          const file = event.payload.paths?.[0];
+          if (!file) return;
+
+          handleImport(file);
+        }
+            
+        else {
+          setIsDragging(false);
+        }
+
+      });
+    }
+
+    init();
+    
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
     };
   }, []);
 
@@ -155,6 +198,13 @@ function App() {
           </div>
         </div>
       )}
+
+      {isDragging && (
+        <div className="dragging-overlay">
+          <h1>Drag file(s) here.</h1>
+        </div>
+
+      )}
       <Navbar />
       <ImportButtons 
         cols={cols}
@@ -165,7 +215,7 @@ function App() {
         gridPreview={gridPreview}
         selectedClips={selectedClips}
         setSelectedClips={setSelectedClips}
-        onImport={handleImport}
+        onImport={onImportClick}
         loading={loading}
       />
       <div className="main" >

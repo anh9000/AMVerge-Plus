@@ -167,18 +167,8 @@ async fn export_clips(
             .ok_or("Invalid filename")?
             .to_string_lossy();
 
-        let extension = save_path
-            .extension()
-            .unwrap_or_default()
-            .to_string_lossy();
-
         for clip in clips.iter() {
             let clip_path = Path::new(clip);
-
-            // Extract filename like "scene_0007.mp4"
-            let original_filename = clip_path
-                .file_name()
-                .ok_or("Invalid clip filename")?;
 
             // Extract the numeric part (0007)
             let stem_part = clip_path
