@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Vite cache
+.vite/
+
+# Tauri / Rust build artifacts
+src-tauri/target/
+src-tauri/bin/
+src-tauri/gen/schemas/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+./backend/output_test
+./backend/test
+
+./frontend/src-tauri/bin

@@ -1,39 +1,95 @@
-import numpy as np
 import subprocess
-import math
 import os
-import cv2
-import av
 import sys
 import json
-from utils import generate_keyframes, emit_progress
+import tempfile
+from amverge_utils.video_utils import generate_keyframes, emit_progress, get_binary
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import av
+from PIL import Image
+import time 
 
-def generate_thumbnails(output_dir: str, scene_count: int, file_name):
-    def make_thumb(i):
+# running cmds like ffmpeg opens command window, this prevents that
+CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
+is_executable = getattr(sys, "frozen", False)
+
+# sys.frozen is an attribute added to executables, so this checks if it's an executable running
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(__file__)
+
+def _log_dir() -> str:
+    # In installed builds, the sidecar exe often lives under a read-only
+    # install/resources directory. Always log to a user-writable location.
+    base = (
+        os.getenv("LOCALAPPDATA")
+        or os.getenv("APPDATA")
+        or tempfile.gettempdir()
+    )
+    return os.path.join(base, "AMVerge")
+
+DEBUG_LOG_DIR = _log_dir()
+try:
+    os.makedirs(DEBUG_LOG_DIR, exist_ok=True)
+except Exception:
+    # Last-ditch fallback
+    DEBUG_LOG_DIR = tempfile.gettempdir()
+
+DEBUG_LOG = os.path.join(DEBUG_LOG_DIR, "backend_debug.txt")
+
+def log(msg):
+    try:
+        with open(DEBUG_LOG, "a", encoding="utf-8") as f:
+            f.write(msg + "\n")
+    except Exception:
+        # Never crash the backend due to logging.
+        pass
+
+
+FFMPEG = get_binary("ffmpeg.exe")
+FFPROBE = get_binary("ffprobe.exe")
+
+log(f"frozen: {getattr(sys,'frozen',False)}")
+log(f"sys.executable: {sys.executable}")
+log(f"BASE_DIR: {BASE_DIR}")
+log(f"FFMPEG: {FFMPEG}")
+
+def generate_thumbnails(output_dir: str, scenes: list, file_name: str):
+    def make_thumb(scene):
+        i = scene["scene_index"]
         clip_path = os.path.join(output_dir, f"{file_name}_{i:04d}.mp4")
         thumb_path = os.path.join(output_dir, f"{file_name}_{i:04d}.jpg")
-        if not os.path.exists(clip_path) or os.path.getsize(clip_path) == 0:
-            return None
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", clip_path,
-            "-vframes", "1",
-            "-q:v", "5",        # jpeg quality 1-31, lower = better
-            "-vf", "scale=320:-1",
-            thumb_path
-        ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return thumb_path
+        
+        try:
+            with av.open(clip_path) as container:
+                stream = container.streams.video[0]
+                stream.codec_context.skip_frame = "NONKEY"
+                for frame in container.decode(stream):
+                    img = frame.to_image()
+
+                    THUMB_WIDTH = 360
+                    THUMB_QUALITY = 80
+
+                    new_w = THUMB_WIDTH
+                    new_h = max(1, int(new_w * img.height / img.width))
+
+                    img = img.resize((new_w, new_h), resample=Image.Resampling.BICUBIC)
+                    img.save(thumb_path, "JPEG", quality=THUMB_QUALITY)
+                    break  # only need first frame
+        except Exception:
+            pass
 
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        futures = [executor.submit(make_thumb, i) for i in range(scene_count)]
+        futures = [executor.submit(make_thumb, scene) for scene in scenes]
         for _ in as_completed(futures):
             pass
 
 def trim_scenes_at_keyframes(video_path: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
-    
+    t_total0 = time.perf_counter()
+
     file_name = os.path.splitext(os.path.basename(video_path))[0]
 
     emit_progress(10, "Extracting keyframes...")
@@ -52,7 +108,7 @@ def trim_scenes_at_keyframes(video_path: str, output_dir: str):
     out_pattern = os.path.join(output_dir, f"{file_name}_%04d.mp4")
 
     cmd = [
-        "ffmpeg", "-y",
+        FFMPEG, "-y",
         "-i", video_path,
         "-c", "copy",
         "-f", "segment",
@@ -60,17 +116,16 @@ def trim_scenes_at_keyframes(video_path: str, output_dir: str):
         "-reset_timestamps", "1",
         out_pattern
     ]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+    log(result.stdout)
+    log(result.stderr)
 
     print(f"Output dir: {output_dir}", file=sys.stderr)
     print(f"Files created: {os.listdir(output_dir)}", file=sys.stderr)
 
-    emit_progress(75, "Generating thumbnails..")
-    scene_count = len(cut_points) + 1
-    generate_thumbnails(output_dir, scene_count, file_name)
-
     # Collect results
-    emit_progress(95, "Assembling results...")
+    emit_progress(75, "Building scenes..")
+
     final_scenes = []
     boundaries = [0.0] + cut_points
     for i, start in enumerate(boundaries):
@@ -86,21 +141,38 @@ def trim_scenes_at_keyframes(video_path: str, output_dir: str):
                 "thumbnail": thumb_path,
                 "original_file": file_name
             })
+
+    emit_progress(90, "Generating thumbnails...")
+    
+    t_thumbs0 = time.perf_counter()
+    print(f"TIMING|thumbs_start|scenes={len(final_scenes)}", file=sys.stderr, flush=True)
+
+    generate_thumbnails(output_dir, final_scenes, file_name)
+
+    t_thumbs1 = time.perf_counter()
+    print(f"TIMING|thumbs_end|seconds={t_thumbs1 - t_thumbs0:.3f}", file=sys.stderr, flush=True)
+
     emit_progress(100, "Done")
+
+    t_total1 = time.perf_counter()
+    print(f"TIMING|total_end_to_end|seconds={t_total1 - t_total0:.3f}", file=sys.stderr, flush=True)
 
     return final_scenes
 
 if __name__ == "__main__":
-    input_file = sys.argv[1]
-    output_dir = sys.argv[2]
-    # output_dir = sys.argv[4]
-    # scenes = detect_and_trim_scenes(
-    #     original_video_path=input_file,
-    #     threshold=threshold,
-    #     blocksize=blocksize,
-    #     output_dir=output_dir
+    try:
+        input_file = sys.argv[1]
+        output_dir = sys.argv[2]
 
-    scenes = trim_scenes_at_keyframes(input_file, output_dir)
-    print("About to print JSON", file=sys.stderr)
-    print(json.dumps(scenes)) # sends to stdout for rust to collect, react parses it
-    sys.stdout.flush() 
+        scenes = trim_scenes_at_keyframes(input_file, output_dir)
+        print("About to print JSON", file=sys.stderr)
+        print(json.dumps(scenes)) # sends to stdout for rust to collect, react parses it
+        if sys.stdout:
+            sys.stdout.flush()
+    except Exception as e:
+        import traceback
+        log(f"FATAL ERROR: {e}")
+        log(traceback.format_exc())
+        print(json.dumps([]))
+        sys.stdout.flush()
+        sys.exit(1)

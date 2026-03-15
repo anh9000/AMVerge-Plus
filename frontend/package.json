@@ -1,11 +1,13 @@
 {
-  "name": "tauri-app",
+  "name": "amverge",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:sidecar": "node ./scripts/build-sidecar.mjs",
+    "build:all": "npm run build:sidecar && npm run build",
     "preview": "vite preview",
     "tauri": "tauri"
   },

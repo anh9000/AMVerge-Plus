@@ -1,9 +1,67 @@
-venv
-.venv
-./backend/test
-./backend/output_test
+#############################################
+# Python
+#############################################
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# --- Video files ---
+#############################################
+# Node / Frontend
+#############################################
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/*.local
+**/.vite/
+
+#############################################
+# Rust / Tauri
+#############################################
+**/target/
+frontend/src-tauri/bin/
+frontend/src-tauri/gen/schemas/
+
+#############################################
+# Editors / OS
+#############################################
+**/.vscode/*
+!**/.vscode/extensions.json
+**/.idea/
+**/.DS_Store
+**/*.suo
+**/*.ntvs*
+**/*.njsproj
+**/*.sln
+**/*.sw?
+
+#############################################
+# App outputs / generated assets
+#############################################
+backend/build/
+backend/dist/
+backend/output_test/
+backend/test/
+frontend/backend/output_test/
+clips_output/
+
+#############################################
+# Logs
+#############################################
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+#############################################
+# Media files (project outputs)
+#############################################
 *.mp4
 *.mkv
 *.mov

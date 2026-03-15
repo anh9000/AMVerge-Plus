@@ -1,4 +1,3 @@
-import { useState } from "react"
 
 const buttons = [
     {
@@ -15,6 +14,7 @@ type ButtonProps = {
     name: String,
     directory: string
 }
+
 function ButtonComponent(props: ButtonProps) {
     return (
         <div className="sidebar-button">
@@ -28,7 +28,6 @@ function ButtonComponent(props: ButtonProps) {
 }
 
 export default function Sidebar() {
-    const [fileList, setFileList] = useState([]);
 
     return (
         <div className="sidebar-container">

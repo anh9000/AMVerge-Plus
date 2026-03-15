@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import type { RefObject } from "react";
 import {
     FaPlay,
     FaPause,
@@ -6,14 +7,26 @@ import {
     FaVolumeUp,
     FaExpand
 } from "react-icons/fa";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 type VideoPlayerProps = {
   selectedClip: string;
+    videoIsHEVC: boolean | null;
+    userHasHEVC: RefObject<boolean>;
+    posterPath: string | null;
+    importToken: string;
 };
 
-export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
+export default function VideoPlayer({ selectedClip, videoIsHEVC, userHasHEVC, posterPath, importToken }: VideoPlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const [effectiveClip, setEffectiveClip] = useState<string | null>(selectedClip);
+    const selectedClipRef = useRef<string>(selectedClip);
+    const proxyInFlightRef = useRef(false);
+    const proxyAttemptedForClipRef = useRef<string | null>(null);
+    const hasPlayedRef = useRef(false);
+    const hasFirstFrameRef = useRef(false);
+    const videoFrameCallbackIdRef = useRef<number | null>(null);
+        const [isVideoReady, setIsVideoReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -22,21 +35,193 @@ export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
     const wasPlayingRef = useRef(false);
     const rafRef = useRef<number | null>(null);
 
-    const safePlay = (video: HTMLVideoElement) => {
-        if (!video.src || video.readyState === 0) return;
-        video.play().catch((err) => {
-            if (err.name !== "AbortError") console.error(err);
-        })
-    }
+    const hasHevcSupport = userHasHEVC.current === true;
+
+    useEffect(() => {
+        selectedClipRef.current = selectedClip;
+    }, [selectedClip]);
 
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !selectedClip) return;
 
+        proxyInFlightRef.current = false;
+        proxyAttemptedForClipRef.current = null;
+        hasPlayedRef.current = false;
+        hasFirstFrameRef.current = false;
+
+        if (videoFrameCallbackIdRef.current && (video as any).cancelVideoFrameCallback) {
+            try {
+                (video as any).cancelVideoFrameCallback(videoFrameCallbackIdRef.current);
+            } catch {
+                // ignore
+            }
+        }
+        videoFrameCallbackIdRef.current = null;
+        setEffectiveClip(null);
+        setIsVideoReady(false);
+
         setCurrentTime(0)
         setDuration(0)
         setIsPlaying(false);
     }, [selectedClip])
+
+    // Source selection based on the new HEVC architecture:
+    // - If the WebView can decode HEVC, always use the original clip.
+    // - If it can't decode HEVC and the imported video is HEVC, proactively switch to H.264 proxy.
+    // - If codec info is still unknown, don't load anything yet (avoid black-screen attempts).
+    useEffect(() => {
+        if (!selectedClip) {
+            setEffectiveClip(null);
+            setIsVideoReady(false);
+            return;
+        }
+
+        // If HEVC is supported, always prefer originals (ignore proxy logic).
+        if (hasHevcSupport) {
+            if (effectiveClip !== selectedClip) setEffectiveClip(selectedClip);
+            setIsVideoReady(false);
+            return;
+        }
+
+        // Without HEVC support, avoid attempting to load until we know whether it's HEVC.
+        if (videoIsHEVC === null) {
+            if (effectiveClip !== null) setEffectiveClip(null);
+            setIsVideoReady(false);
+            return;
+        }
+
+        // Not HEVC: play original.
+        if (videoIsHEVC === false) {
+            if (effectiveClip !== selectedClip) setEffectiveClip(selectedClip);
+            setIsVideoReady(false);
+            return;
+        }
+
+        // HEVC + no support: request and use proxy.
+        if (effectiveClip && effectiveClip !== selectedClip) {
+            // Already on a proxy path.
+            return;
+        }
+
+        if (proxyInFlightRef.current) return;
+        if (proxyAttemptedForClipRef.current === selectedClip) return;
+
+        proxyAttemptedForClipRef.current = selectedClip;
+        proxyInFlightRef.current = true;
+
+        // Keep src empty while the proxy is being ensured.
+        setEffectiveClip(null);
+        setIsVideoReady(false);
+
+        invoke<string>("ensure_preview_proxy", { clipPath: selectedClip })
+            .then((proxyPath) => {
+                proxyInFlightRef.current = false;
+                if (!proxyPath) return;
+
+                // Ignore if the user already selected a different clip.
+                if (selectedClipRef.current !== selectedClip) return;
+
+                setEffectiveClip(proxyPath);
+                setIsVideoReady(false);
+                setTimeout(() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    v.load();
+                    safePlay(v);
+                }, 0);
+            })
+            .catch((err) => {
+                proxyInFlightRef.current = false;
+                console.warn("ensure_preview_proxy failed", err);
+            });
+    }, [selectedClip, videoIsHEVC, hasHevcSupport, effectiveClip]);
+
+    const requestFirstFrame = (video: HTMLVideoElement) => {
+        if (hasFirstFrameRef.current) return;
+        if (!(video as any).requestVideoFrameCallback) return;
+        if (videoFrameCallbackIdRef.current) return;
+
+        try {
+            videoFrameCallbackIdRef.current = (video as any).requestVideoFrameCallback(() => {
+                hasFirstFrameRef.current = true;
+                videoFrameCallbackIdRef.current = null;
+            });
+        } catch {
+            // ignore
+        }
+    };
+
+    const triggerProxyFallback = (reason: string) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (proxyInFlightRef.current) return;
+        if (!selectedClip) return;
+
+        // Only proxy for HEVC-missing-support scenarios.
+        if (hasHevcSupport) return;
+        if (videoIsHEVC !== true) return;
+
+        // Only auto-proxy when we are still trying to play the original.
+        if (!effectiveClip || effectiveClip !== selectedClip) return;
+
+        // Avoid retry loops for the same clip.
+        if (proxyAttemptedForClipRef.current === selectedClip) return;
+
+        proxyAttemptedForClipRef.current = selectedClip;
+        proxyInFlightRef.current = true;
+
+        console.warn("[VideoPlayer] triggering proxy fallback", {
+            reason,
+            selectedClip,
+            readyState: video.readyState,
+            networkState: video.networkState,
+            errorCode: video.error?.code ?? null,
+        });
+
+        invoke<string>("ensure_preview_proxy", { clipPath: selectedClip })
+            .then((proxyPath) => {
+                if (!proxyPath) {
+                    proxyInFlightRef.current = false;
+                    return;
+                }
+                setEffectiveClip(proxyPath);
+                proxyInFlightRef.current = false;
+                setTimeout(() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    v.load();
+                    safePlay(v);
+                }, 0);
+            })
+            .catch((err) => {
+                console.warn("ensure_preview_proxy failed", err);
+                proxyInFlightRef.current = false;
+            });
+    };
+
+    const safePlay = (video: HTMLVideoElement) => {
+        if (!video.src || video.readyState === 0) return;
+        requestFirstFrame(video);
+        video.play().catch((err: any) => {
+            const name = err?.name as string | undefined;
+
+            // AbortError can happen during rapid src changes.
+            if (name === "AbortError") return;
+
+            console.warn("[VideoPlayer] play() rejected", {
+                name,
+                message: err?.message,
+                selectedClip,
+            });
+
+            // If the codec/container is unsupported, proactively proxy.
+            if (name === "NotSupportedError") {
+                triggerProxyFallback("play_rejected_NotSupportedError");
+            }
+        });
+    };
 
     // --- CONTROL HANDLERS ---
     useEffect(() => {
@@ -158,14 +343,6 @@ export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
         }
     };
 
-    const stopVideo = () => {
-        if (!videoRef.current) return;
-
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-        setIsPlaying(false);
-    };
-
     const toggleMute = () => {
         if (!videoRef.current) return;
 
@@ -186,10 +363,16 @@ export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
             <div className="video-frame">
                 <video
                     ref={videoRef}
-                    src={selectedClip ? convertFileSrc(selectedClip): undefined}
+                    src={effectiveClip ? `${convertFileSrc(effectiveClip)}?v=${importToken}` : undefined}
+                    poster={posterPath ? `${convertFileSrc(posterPath)}?v=${importToken}` : undefined}
                     preload="metadata"
                     muted
                     loop
+                    style={{ opacity: isVideoReady ? 1 : 0 }}
+                    onError={(e) => {
+                        const v = e.currentTarget;
+                        triggerProxyFallback(`onError_${v.error?.code ?? "unknown"}`);
+                    }}
                     onLoadedMetadata={(e) => {
                         const video = e.currentTarget;
                         video.style.setProperty(
@@ -197,13 +380,22 @@ export default function VideoPlayer({ selectedClip }: VideoPlayerProps) {
                             `${video.videoWidth} / ${video.videoHeight}`
                         );
                         setDuration(video.duration);
+                        requestFirstFrame(video);
                         safePlay(video);
+                    }}
+                    onLoadedData={() => {
+                        setIsVideoReady(true);
                     }}
                     onTimeUpdate={() => {
                         if (!videoRef.current) return;
                         setCurrentTime(videoRef.current.currentTime);
                     }}
-                    onPlay={() => setIsPlaying(true)}
+                    onPlay={(e) => {
+                        hasPlayedRef.current = true;
+                        requestFirstFrame(e.currentTarget);
+                        setIsPlaying(true);
+                        setIsVideoReady(true);
+                    }}
                     onPause={() => setIsPlaying(false)}
                     onClick={() => togglePlay()}
                 />

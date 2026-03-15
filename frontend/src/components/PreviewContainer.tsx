@@ -1,10 +1,13 @@
 import VideoPlayer from "../components/VideoPlayer.tsx"
 import InfoBox from "../components/InfoBox.tsx"
-import useState from "react";
 import React from "react";
 type PreviewContainerProps = {
   selectedClip: string | null;
+  selectedClipThumbnail: string | null;
   selectedClips: Set<string>;
+  videoIsHEVC: boolean | null;
+  userHasHEVC: React.RefObject<boolean>;
+  importToken: string;
   handleExport: (
     selectedClips: Set<string>,
     enableMerged: boolean
@@ -21,7 +24,12 @@ export default function PreviewContainer (props: PreviewContainerProps) {
       <div className="preview-window">
         {props.selectedClip ? (
           <VideoPlayer 
-           selectedClip={ props.selectedClip }/>
+           selectedClip={props.selectedClip}
+           videoIsHEVC={props.videoIsHEVC}
+           userHasHEVC={props.userHasHEVC}
+           posterPath={props.selectedClipThumbnail}
+           importToken={props.importToken}
+          />
           ) : (
             <p>No clip selected</p>
         )}

@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import Navbar from "./components/Navbar.tsx";
 import ImportButtons from "./components/ImportButtons.tsx";
 import MainLayout from "./MainLayout";
-import Sidebar from "./components/Sidebar.tsx"
+// import Sidebar from "./components/Sidebar.tsx"
 import "./App.css";
 
 function App() {
@@ -17,7 +17,9 @@ function App() {
   */
   const [selectedClips, setSelectedClips] = useState<Set<string>>(new Set());
   const [importToken, setImportToken] = useState(() => Date.now().toString());
-  const [clips, setClips] = useState<{ id: string; src: string; thumbnail: string }[]>([]);
+  const [clips, setClips] = useState<{ id: string; src: string; thumbnail: string; originalName?: string }[]>([]);
+  const [importedVideoPath, setImportedVideoPath] = useState<string | null>(null)
+  const [videoIsHEVC, setVideoIsHEVC] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [gridPreview, setGridPreview] = useState<true | false>(false);
   const [cols, setCols] = useState(6);
@@ -25,10 +27,44 @@ function App() {
   const [progressMsg, setProgressMsg] = useState("Starting..."); 
   const [isEmpty, setIsEmpty] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const [sideBarEnabled, setSideBarEnabled] = useState(true);
+  const [sideBarEnabled, setSideBarEnabled] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const userHasHEVC = useRef<boolean>(false)
   const width = gridRef.current?.offsetWidth || 0;
   const gridSize = Math.floor(width / cols);
+
+  // Detect whether the current WebView can decode HEVC (e.g., HEVC Video Extensions on Windows).
+  // This is used as a capability gate: if HEVC is supported, we skip proxy logic and prefer originals.
+  useEffect(() => {
+    try {
+      const candidates = [
+        'video/mp4; codecs="hvc1"',
+        'video/mp4; codecs="hev1"',
+        'video/mp4; codecs="hvc1.1.6.L93.B0"',
+        'video/mp4; codecs="hev1.1.6.L93.B0"',
+      ];
+
+      const mediaSourceSupported = typeof (window as any).MediaSource !== "undefined";
+      const isTypeSupported = mediaSourceSupported
+        ? (mime: string) => (window as any).MediaSource.isTypeSupported(mime)
+        : (_mime: string) => false;
+
+      const videoEl = document.createElement("video");
+      const canPlay = (mime: string) => {
+        const result = videoEl.canPlayType(mime);
+        return result === "probably" || result === "maybe";
+      };
+
+      userHasHEVC.current = candidates.some((c) => isTypeSupported(c) || canPlay(c));
+
+      if (import.meta.env.DEV) {
+        console.log("[amverge] userHasHEVC:", userHasHEVC.current);
+      }
+    } catch {
+      userHasHEVC.current = false;
+    }
+  }, []);
+
 
   const snapGridBigger = () => {
     setCols(c => Math.max(1, c - 1));
@@ -41,9 +77,7 @@ function App() {
     });
 
     // contains path to all clips along w other metadata
-    console.log("Raw result:", result);
     const scenes = JSON.parse(result);
-    console.log("Parsed scenes:", scenes); 
 
     // turns to an array of objects
     return scenes.map((s: any) => ({
@@ -64,6 +98,7 @@ function App() {
         }
       ]
     });
+
     handleImport(file)
   }
 
@@ -76,10 +111,10 @@ function App() {
       setProgress(0);
       setProgressMsg("Starting...");
       setLoading(true);
-
+      setImportedVideoPath(file)
+      setVideoIsHEVC(null);
       setImportToken(Date.now().toString());
       const formatted = await detectScenes(file);
-
       setClips(formatted); // sets all the clips which gets passed to MainLayout
     } catch (err) {
       console.error("Detection failed:", err);
@@ -91,29 +126,61 @@ function App() {
   const handleExport = async(selectedClips: Set<string>, mergeEnabled: boolean) => {
     if (selectedClips.size === 0) return;
 
-    const savePath = await save({
-      filters: [
-        {
-          name: "Video",
-          extensions: ["mp4"]
-        }
-      ]
-    });
-
-    if (!savePath) return;
+    const selected = clips.filter(c => selectedClips.has(c.id));
+    if (selected.length === 0) return;
 
     try {
       setLoading(true);
 
-      const clipArray = clips
-        .filter(c => selectedClips.has(c.id))
-        .map(c => c.src);
-      
-      await invoke("export_clips", {
-        clips: clipArray,
-        savePath: savePath,
-        mergeEnabled: mergeEnabled
-      });
+      const clipArray = selected.map(c => c.src);
+
+      if (mergeEnabled) {
+        const episodeName = selected[0]?.originalName || "episode";
+        const suffix = String(Math.floor(Math.random() * 999) + 1).padStart(3, "0");
+        const defaultName = `${episodeName}_merged_${suffix}.mp4`;
+
+        const savePath = await save({
+          filters: [
+            {
+              name: "Video",
+              extensions: ["mp4"],
+            },
+          ],
+          defaultPath: defaultName,
+        });
+
+        if (!savePath) return;
+
+        await invoke("export_clips", {
+          clips: clipArray,
+          savePath: savePath,
+          mergeEnabled: mergeEnabled,
+        });
+      } else {
+        const firstClipPath = selected[0]?.src || "";
+        const firstFile = firstClipPath.split(/[/\\]/).pop() || "episode_0000.mp4";
+        const firstStem = firstFile.replace(/\.[^/.]+$/, "");
+        const defaultBase = firstStem.replace(/_\d{4}$/, "");
+
+        const savePath = await save({
+          title: "Choose base name for exported clips",
+          filters: [
+            {
+              name: "Video",
+              extensions: ["mp4"],
+            },
+          ],
+          defaultPath: `${defaultBase}_####.mp4`,
+        });
+
+        if (!savePath) return;
+
+        await invoke("export_clips", {
+          clips: clipArray,
+          savePath: savePath,
+          mergeEnabled: false,
+        });
+      }
       
       console.log("Export complete");
     } catch (err) {
@@ -184,8 +251,38 @@ function App() {
     };
   }, []);
 
+  // checking if video is hevc useEffect
+  useEffect(() => {
+    if (!importedVideoPath) {
+      setVideoIsHEVC(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    // Mark as "checking" for this import so hover previews can avoid black-screen attempts.
+    setVideoIsHEVC(null);
+
+    (async () => {
+      try {
+        const hevc = await invoke<boolean>("check_hevc", {
+          videoPath: importedVideoPath
+        });
+
+        if (!cancelled) setVideoIsHEVC(hevc)
+      } catch (err) {
+        console.error("check_hevc failed:", err)
+        if (!cancelled) setVideoIsHEVC(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [importedVideoPath, importToken])
+
   return (
-    <main>
+    <main className="app-root">
       {loading && (
         <div className="loading-overlay">
           <div className="spinner" />
@@ -210,10 +307,11 @@ function App() {
 
       )}
       <div className="window-wrapper">
-        {sideBarEnabled && <Sidebar setSideBarEnabled={setSideBarEnabled}/>}
+        {/* {sideBarEnabled && <Sidebar/>} */}
         <div className="content-wrapper">
           <Navbar 
-           setSideBarEnabled={setSideBarEnabled}/>
+           setSideBarEnabled={setSideBarEnabled}
+           userHasHEVC={userHasHEVC}/>
           <div className="main-content">
             <ImportButtons 
               cols={cols}
@@ -240,7 +338,10 @@ function App() {
               loading={loading}
               isEmpty={isEmpty}
               handleExport={handleExport}
-              sideBarEnabled={sideBarEnabled}/>
+              sideBarEnabled={sideBarEnabled}
+              videoIsHEVC={videoIsHEVC}
+              userHasHEVC={userHasHEVC}
+            />
             </div>
           </div>
         </div>

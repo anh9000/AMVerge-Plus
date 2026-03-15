@@ -16,3 +16,4 @@ Add more frontend stuff:
 
 - Bundle everything together into one .exe using npm run tauri build, and use PyInstaller to bundle venv and all
 python dependencies, then import that same python into main.rs
+

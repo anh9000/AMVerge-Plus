@@ -20,10 +20,16 @@ type LayoutProps = {
         mergeEnabled: boolean
     ) => Promise<void>;
     sideBarEnabled: boolean;
+    videoIsHEVC: boolean | null;
+    userHasHEVC: React.RefObject<boolean>
 };
 export default function MainLayout(props: LayoutProps) {
     const [leftWidth, setLeftWidth] = useState(65);
     const [selectedClip, setSelectedClip] = useState<string | null>(null);
+
+        const selectedClipThumbnail = selectedClip
+            ? props.clips.find((c) => c.src === selectedClip)?.thumbnail ?? null
+            : null;
     /*
     startResize is the function used to resize the PreviewContainer and ClipsContainer
     Notes:
@@ -70,7 +76,10 @@ export default function MainLayout(props: LayoutProps) {
                  clips={props.clips}
                  importToken={props.importToken}
                  loading={props.loading}
-                 isEmpty={props.isEmpty}/>
+                 isEmpty={props.isEmpty}
+                 videoIsHEVC={props.videoIsHEVC}
+                 userHasHEVC={props.userHasHEVC}
+                 />
             </div>
             
             <div
@@ -86,8 +95,12 @@ export default function MainLayout(props: LayoutProps) {
             <div className="right-pane" style={{ width: `${100 - leftWidth}%` }}>
                 <PreviewContainer 
                 selectedClip={selectedClip}
+                selectedClipThumbnail={selectedClipThumbnail}
                 selectedClips={props.selectedClips}
                 handleExport={props.handleExport}
+                videoIsHEVC={props.videoIsHEVC}
+                userHasHEVC={props.userHasHEVC}
+                importToken={props.importToken}
                 />
             </div>
         </div>
