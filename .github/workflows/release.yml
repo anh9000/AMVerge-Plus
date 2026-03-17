@@ -22,9 +22,50 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Create backend venv + install sidecar deps
+        shell: pwsh
+        run: |
+          python -m venv backend/venv
+          backend/venv/Scripts/python -m pip install --upgrade pip
+          backend/venv/Scripts/python -m pip install pyinstaller av pillow numpy
+
+      - name: Install ffmpeg (for bundling)
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y
+          New-Item -ItemType Directory -Force -Path backend | Out-Null
+          New-Item -ItemType Directory -Force -Path frontend/src-tauri/bin | Out-Null
+
+          $chocoRoot = $env:ChocolateyInstall
+          if (-not $chocoRoot) { $chocoRoot = 'C:\ProgramData\chocolatey' }
+
+          $realFfmpeg = Get-ChildItem -Path "$chocoRoot\lib" -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch "\\\\bin\\\\ffmpeg\\.exe$" } |
+            Select-Object -First 1
+          $realFfprobe = Get-ChildItem -Path "$chocoRoot\lib" -Recurse -Filter ffprobe.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch "\\\\bin\\\\ffprobe\\.exe$" } |
+            Select-Object -First 1
+
+          if (-not $realFfmpeg) { $realFfmpeg = Get-Item (Get-Command ffmpeg.exe).Source }
+          if (-not $realFfprobe) { $realFfprobe = Get-Item (Get-Command ffprobe.exe).Source }
+
+          Copy-Item $realFfmpeg.FullName backend/ffmpeg.exe -Force
+          Copy-Item $realFfprobe.FullName backend/ffprobe.exe -Force
+          Copy-Item $realFfmpeg.FullName frontend/src-tauri/bin/ffmpeg.exe -Force
+          Copy-Item $realFfprobe.FullName frontend/src-tauri/bin/ffprobe.exe -Force
+
+      - name: Build sidecar (PyInstaller)
+        working-directory: frontend
+        run: npm run build:sidecar
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
