@@ -52,7 +52,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5ajgyU3Y1QXZJRVZoM0JSdyszZmVtZElGdVcxQ1ZKejF5VzY2RTl1TGExa0FBQkFBQUFBQUFBQUFBQUlBQUFBQThhaE9yWm1jY0R6bm1DNHBWclEwaTRHbTlzUktuOWZZYkZXZFJGRkdidC9JaEc0RHdGbi9pOE9EbXNsejJzTjlRTkxkeUxNcXE2SnhyOVZVRzRadysxOVZFQUJpa2pEQkxWQUo0TVVJT3BvYUw3eFJoR25QbWNQRmx2dEwreDk4ejhFMFBWaHpzeUU9Cg==",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1NTAyMEI4MjFCMDdFMzQKUldRMGZyQWh1Q0JRRmFBVnk3dWpGc2xuQVltQm5nV1FVTml1MkZRdHZTSDJqWG11ZXZFNXRxejYK",
       "endpoints": [
         "https://github.com/crptk/AMVerge/releases/latest/download/latest.json"
       ],
