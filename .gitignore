@@ -3,11 +3,19 @@
 #############################################
 venv/
 .venv/
-__pycache__/
+**/__pycache__/
 *.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+#############################################
+# Secrets / env files
+#############################################
+.env
+.env.*
+!.env.example
+!.env.sample
 
 #############################################
 # Node / Frontend
@@ -44,9 +52,9 @@ frontend/src-tauri/gen/schemas/
 backend/build/
 backend/dist/
 backend/output_test/
-backend/test/
 frontend/backend/output_test/
-clips_output/
+backend/clips_output/
+backend/keyframe_clips/
 
 #############################################
 # Logs
@@ -70,3 +78,17 @@ lerna-debug.log*
 *.flv
 *.wmv
 *.m4v
+*.m2ts
+*.mts
+*.m2t
+*.mpg
+*.mpeg
+*.vob
+
+# Audio (often large)
+*.mp3
+*.m4a
+*.flac
+*.wav
+*.aac
+*.opus

@@ -1,37 +1,55 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Vite cache
-.vite/
-
-# Tauri / Rust build artifacts
-src-tauri/target/
-src-tauri/bin/
-src-tauri/gen/schemas/
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ---- OS / editors ----
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+*.swp
 
-./backend/output_test
-./backend/test
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+backend/venv/
 
-./frontend/src-tauri/bin
+# ---- Node / frontend ----
+node_modules/
+dist/
+frontend/dist/
+frontend/node_modules/
+
+# ---- Rust / Tauri ----
+**/target/
+frontend/src-tauri/target/
+
+# ---- Build outputs / artifacts ----
+backend/build/
+backend/clips_output/
+backend/keyframe_clips/
+backend/output_test/
+frontend/src-tauri/bin/
+*.log
+
+# ---- Large media files (don’t commit) ----
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+*.m4v
+*.m2ts
+*.wmv
+*.flv
+
+# Audio (often large)
+*.mp3
+*.m4a
+*.flac
+*.wav
+*.aac
+*.opus
+
+# Images / archives (optional)
+*.zip
+*.7z
+*.rar
