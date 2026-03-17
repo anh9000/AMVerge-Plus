@@ -52,7 +52,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1NTAyMEI4MjFCMDdFMzQKUldRMGZyQWh1Q0JRRmFBVnk3dWpGc2xuQVltQm5nV1FVTml1MkZRdHZTSDJqWG11ZXZFNXRxejYK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFMjU1QzVFMDZFNDNDOTgKUldTWVBPUUdYbHdsM3RpdzArNXRDNGt1SGU2N0lvVHpWRE5JSXFqTHFaeTVwOUZIcHJ4MWY4eWYK",
       "endpoints": [
         "https://github.com/crptk/AMVerge/releases/latest/download/latest.json"
       ],
