@@ -6,12 +6,12 @@ import cv2
 import av
 import sys
 import json
-from amverge_utils import generate_keyframes, keyframe_windows, merge_short_scenes, emit_progress
+from utils import generate_keyframes, keyframe_windows, merge_short_scenes, emit_progress
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 '''
-This file contains the old scene detect algorithm I created, it was too slow
-so it's now deprecated. Now it only cuts at keyframes.
+This file contains the old scene detect algorithm I created, although it was accurate, it was too slow
+so it's now deprecated. Now it only cuts at keyframes at main.py.
 '''
 #-----------------------------
 #   SCENEDETECT ALGORITHM
@@ -138,7 +138,7 @@ def detect_and_trim_scenes(
         i, (start, end) = args
         return read_frames(original_video_path, start, end, threshold, blocksize)
     
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 4)) as executor:
         futures = {executor.submit(scan_window, (i, w)): i for i, w in enumerate(windows)}
         completed = 0
         for future in as_completed(futures):
