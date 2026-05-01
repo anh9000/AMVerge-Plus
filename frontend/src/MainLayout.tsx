@@ -1,12 +1,13 @@
-import { useState } from "react"
-import ClipsContainer from "./components/ClipsContainer";
-import PreviewContainer from "./components/PreviewContainer";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ClipsContainer from "./components/clipsGrid/ClipsContainer.tsx";
+import PreviewContainer from "./components/previewPanel/PreviewContainer.tsx";
 
 type LayoutProps = {
     cols: number;
     gridSize: number;
     gridRef: React.RefObject<HTMLDivElement | null>;
     gridPreview: boolean;
+    setGridPreview: React.Dispatch<React.SetStateAction<boolean>>;
     selectedClips: Set<string>;
     setSelectedClips: React.Dispatch<
         React.SetStateAction<Set<string>>
@@ -17,27 +18,42 @@ type LayoutProps = {
     isEmpty: boolean;
     handleExport: (
         selectedClips: Set<string>,
-        mergeEnabled: boolean
+        mergeEnabled: boolean,
+        mergeFileName?: string,
+        remuxEnabled?: boolean,
     ) => Promise<void>;
     sideBarEnabled: boolean;
     videoIsHEVC: boolean | null;
     userHasHEVC: React.RefObject<boolean>
     focusedClip: string | null;
     setFocusedClip: React.Dispatch<React.SetStateAction<string | null>>
+    exportDir: string | null;
+    onPickExportDir: () => void;
+    onExportDirChange: (dir: string) => void;
+    defaultMergedName: string;
 };
+
 export default function MainLayout(props: LayoutProps) {
     const [leftWidth, setLeftWidth] = useState(65);
 
-    const focusedClipThumbnail = props.focusedClip
-        ? props.clips.find((c) => c.src === props.focusedClip)?.thumbnail ?? null
-        : null;
-    /*
-    startResize is the function used to resize the PreviewContainer and ClipsContainer
-    Notes:
-    - e: The MouseEvent() object, it's passed in on declaration of the object
-         and is used to track all mouse interactions with the window
-    */
-    const startResize = (e: React.MouseEvent<HTMLDivElement>) => {
+    const focusedClipThumbnail = useMemo(
+        () =>
+            props.focusedClip
+                ? props.clips.find((c) => c.src === props.focusedClip)?.thumbnail ?? null
+                : null,
+        [props.focusedClip, props.clips]
+    );
+
+    // track active resize listeners so we can clean up on unmount.
+    const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+    useEffect(() => {
+        return () => {
+            resizeCleanupRef.current?.();
+        };
+    }, []);
+
+    const startResize = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const startX = e.clientX;
         const container = e.currentTarget.parentElement as HTMLElement;
         const leftPane = container.children[0] as HTMLElement;
@@ -57,12 +73,16 @@ export default function MainLayout(props: LayoutProps) {
         const onMouseUp = () => {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
+            resizeCleanupRef.current = null;
         };
+
+        // remove any stale listeners before attaching new ones.
+        resizeCleanupRef.current?.();
 
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
-        console.log("Mouse clicked!", e.clientX)
-    }
+        resizeCleanupRef.current = onMouseUp;
+    }, []);
     return (
         <div className="split-layout">
             <div className="left-pane" style={{ width: `${leftWidth}%`}}>
@@ -84,6 +104,7 @@ export default function MainLayout(props: LayoutProps) {
                  />
             </div>
             
+    
             <div
                 className="divider"
                 onMouseDown={(e) => startResize(e)}
@@ -96,13 +117,17 @@ export default function MainLayout(props: LayoutProps) {
 
             <div className="right-pane" style={{ width: `${100 - leftWidth}%` }}>
                 <PreviewContainer 
-                focusedClip={props.focusedClip}
-                focusedClipThumbnail={focusedClipThumbnail}
-                selectedClips={props.selectedClips}
-                handleExport={props.handleExport}
-                videoIsHEVC={props.videoIsHEVC}
-                userHasHEVC={props.userHasHEVC}
-                importToken={props.importToken}
+                    focusedClip={props.focusedClip}
+                    focusedClipThumbnail={focusedClipThumbnail}
+                    selectedClips={props.selectedClips}
+                    handleExport={props.handleExport}
+                    videoIsHEVC={props.videoIsHEVC}
+                    userHasHEVC={props.userHasHEVC}
+                    importToken={props.importToken}
+                    exportDir={props.exportDir}
+                    onPickExportDir={props.onPickExportDir}
+                    onExportDirChange={props.onExportDirChange}
+                    defaultMergedName={props.defaultMergedName}
                 />
             </div>
         </div>
