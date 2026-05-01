@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import "./styles/index.css";
 
 async function maybeCheckForUpdatesOnStartup() {
-  // Only run inside the Tauri runtime.
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
     return;
   }

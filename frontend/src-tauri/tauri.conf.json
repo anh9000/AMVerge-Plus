@@ -1,28 +1,28 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AMVerge",
-  "version": "0.1.1",
+  "productName": "AMVerge Plus",
+  "version": "0.5.0",
   "identifier": "com.amiri.amverge",
-  "mainBinaryName": "AMVerge",
+  "mainBinaryName": "AMVerge Plus",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:all",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "AMVerge",
+        "title": "AMVerge Plus",
         "minWidth": 920,
         "minHeight": 540
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost blob: data:; media-src 'self' asset: https://asset.localhost blob:; font-src 'self' data:",
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**"]
+        "scope": ["$APPDATA/com.amiri.amverge/**"]
       }
     }
   },
@@ -33,14 +33,14 @@
     "windows": {
       "nsis": {
         "installerIcon": "icons/amverge-mini-logo.ico",
-        "startMenuFolder": "AMVerge"
+        "startMenuFolder": "AMVerge Plus"
       }
     },
     "resources": [
       "bin/backend_script-x86_64-pc-windows-msvc/backend_script.exe",
       "bin/backend_script-x86_64-pc-windows-msvc/_internal/**/*",
-      "bin/ffmpeg.exe",
-      "bin/ffprobe.exe"
+      "bin/backend_script-x86_64-pc-windows-msvc/_internal/ffmpeg.exe",
+      "bin/backend_script-x86_64-pc-windows-msvc/_internal/ffprobe.exe"
     ],
     "icon": [
       "icons/32x32.png",
@@ -52,9 +52,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFMjU1QzVFMDZFNDNDOTgKUldTWVBPUUdYbHdsM3RpdzArNXRDNGt1SGU2N0lvVHpWRE5JSXFqTHFaeTVwOUZIcHJ4MWY4eWYK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFM0Y2M0JBREQ3QzEzMEUKUldRT0UzemR2bU0vcnFEdnVCQUFnendOWU42bWg2RWROMS9zd0VXRXNZakltMWN0OERUK0dib0MK",
       "endpoints": [
-        "https://github.com/crptk/AMVerge/releases/latest/download/latest.json"
+        "https://github.com/Anh9000/AMVerge-Plus/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

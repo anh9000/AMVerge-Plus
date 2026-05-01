@@ -1,355 +1,465 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { save, open } from "@tauri-apps/plugin-dialog";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useEffect } from "react";
-import Navbar from "./components/Navbar.tsx";
-import ImportButtons from "./components/ImportButtons.tsx";
-import MainLayout from "./MainLayout";
-// import Sidebar from "./components/Sidebar.tsx"
-import "./App.css";
+import { Event, listen } from "@tauri-apps/api/event";
+
+import AppLayout from "./components/AppLayout";
+import UpdateBanner from "./components/UpdateBanner";
+import HomePage from "./pages/HomePage";
+import Menu from "./pages/Menu";
+import LoadingOverlay from "./components/LoadingOverlay";
+import { type Page } from "./components/sidebar/types";
+
+import useAppState from "./hooks/useAppState";
+import useEpisodePanelState from "./hooks/useEpisodePanelState";
+import useImportExport from "./hooks/useImportExport";
+import useHEVCSupport from "./hooks/useHEVCSupport";
+import useDragDropImport from "./hooks/useDragDropImport";
+import usePersistence from "./hooks/usePersistence";
+
+const EPISODE_PANEL_STORAGE_KEY = "amverge_episode_panel_v1";
+const SIDEBAR_WIDTH_STORAGE_KEY = "amverge_sidebar_width_px_v1";
+const EXPORT_DIR_STORAGE_KEY = "amverge_export_dir_v1";
 
 function App() {
-  /*
-  Create setSelectedClip function, whatever gets passed into it
-  becomes selectedClip
-  */
-  const [focusedClip, setFocusedClip] = useState<string | null>(null);
-  const [selectedClips, setSelectedClips] = useState<Set<string>>(new Set());
-  const [importToken, setImportToken] = useState(() => Date.now().toString());
-  const [clips, setClips] = useState<{ id: string; src: string; thumbnail: string; originalName?: string }[]>([]);
-  const [importedVideoPath, setImportedVideoPath] = useState<string | null>(null)
-  const [videoIsHEVC, setVideoIsHEVC] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [gridPreview, setGridPreview] = useState<true | false>(false);
-  const [cols, setCols] = useState(6);
-  const [progress, setProgress] = useState(0);
-  const [progressMsg, setProgressMsg] = useState("Starting..."); 
-  const [isEmpty, setIsEmpty] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [sideBarEnabled, setSideBarEnabled] = useState(false);
+  // Core app state
+  const {
+    state,
+    dispatch,
+    setFocusedClip,
+    setSelectedClips,
+    setClips,
+    setEpisodes,
+    setSelectedEpisodeId,
+    setEpisodeFolders,
+    setOpenedEpisodeId,
+    setSelectedFolderId,
+    setImportedVideoPath,
+    setVideoIsHEVC,
+  } = useAppState();
+
+  // Refs
   const gridRef = useRef<HTMLDivElement>(null);
-  const userHasHEVC = useRef<boolean>(false)
+  const windowWrapperRef = useRef<HTMLDivElement | null>(null);
+  const mainLayoutWrapperRef = useRef<HTMLDivElement | null>(null);
+  const userHasHEVC = useRef(false);
+  const abortedRef = useRef(false);
+
+  // UI state
+  const [gridPreview, setGridPreview] = useState(false);
+  const [cols, setCols] = useState(6);
+  const [isDragging, setIsDragging] = useState(false);
+  const [sideBarEnabled, setSideBarEnabled] = useState(true);
+  const [activePage, setActivePage] = useState<Page>("home");
+  const [progress, setProgress] = useState(0);
+  const [progressMsg, setProgressMsg] = useState("Starting...");
+  const [dividerOffsetPx, setDividerOffsetPx] = useState(0);
+
+  // Persisted UI state
+  const [sidebarWidthPx, setSidebarWidthPx] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+      const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    } catch {
+      // ignore
+    }
+
+    return 280;
+  });
+
+  const [exportDir, setExportDir] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(EXPORT_DIR_STORAGE_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Derived values
   const width = gridRef.current?.offsetWidth || 0;
   const gridSize = Math.floor(width / cols);
+  const isEmpty = state.clips.length === 0;
 
-  // Detect whether the current WebView can decode HEVC (e.g., HEVC Video Extensions on Windows).
-  // This is used as a capability gate: if HEVC is supported, we skip proxy logic and prefer originals.
-  useEffect(() => {
-    try {
-      const candidates = [
-        'video/mp4; codecs="hvc1"',
-        'video/mp4; codecs="hev1"',
-        'video/mp4; codecs="hvc1.1.6.L93.B0"',
-        'video/mp4; codecs="hev1.1.6.L93.B0"',
-      ];
+  // Import/export
+  const {
+    loading,
+    importToken,
+    setImportToken,
+    detectionSettings,
+    setDetectionSettings,
+    batchTotal,
+    batchDone,
+    batchCurrentFile,
+    onImportClick,
+    handleImport,
+    handleExport,
+    handlePickExportDir,
+    handleBatchImport,
+  } = useImportExport({
+    clips: state.clips,
+    setProgress,
+    setProgressMsg,
+    setFocusedClip,
+    setSelectedClips,
+    setVideoIsHEVC,
+    setImportedVideoPath,
+    setClips,
+    setEpisodes,
+    setSelectedEpisodeId,
+    setOpenedEpisodeId,
+    selectedFolderId: state.selectedFolderId,
+    abortedRef,
+    EXPORT_DIR_STORAGE_KEY,
+    exportDir,
+    setExportDir,
+  });
 
-      const mediaSourceSupported = typeof (window as any).MediaSource !== "undefined";
-      const isTypeSupported = mediaSourceSupported
-        ? (mime: string) => (window as any).MediaSource.isTypeSupported(mime)
-        : (_mime: string) => false;
+  // Episode panel actions
+  const {
+    handleSelectFolder,
+    handleMoveEpisodeToFolder,
+    handleMoveEpisode,
+    handleMoveFolder,
+    handleSortEpisodePanel,
+    handleRenameEpisode,
+    handleRenameFolder,
+    handleDeleteFolder,
+    handleDeleteEpisode,
+    handleCreateFolder,
+    handleToggleFolderExpanded,
+  } = useEpisodePanelState({
+    episodes: state.episodes,
+    setEpisodes,
+    selectedEpisodeId: state.selectedEpisodeId,
+    setSelectedEpisodeId,
+    episodeFolders: state.episodeFolders,
+    setEpisodeFolders,
+    openedEpisodeId: state.openedEpisodeId,
+    setOpenedEpisodeId,
+    selectedFolderId: state.selectedFolderId,
+    setSelectedFolderId,
+    setClips,
+    setSelectedClips,
+    setFocusedClip,
+    setImportedVideoPath,
+    setImportToken,
+  });
 
-      const videoEl = document.createElement("video");
-      const canPlay = (mime: string) => {
-        const result = videoEl.canPlayType(mime);
-        return result === "probably" || result === "maybe";
-      };
+  // App-level hooks
+  useHEVCSupport(userHasHEVC);
 
-      userHasHEVC.current = candidates.some((c) => isTypeSupported(c) || canPlay(c));
+  usePersistence({
+    episodePanelStorageKey: EPISODE_PANEL_STORAGE_KEY,
+    sidebarWidthStorageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    exportDirStorageKey: EXPORT_DIR_STORAGE_KEY,
+    episodeFolders: state.episodeFolders,
+    episodes: state.episodes,
+    selectedFolderId: state.selectedFolderId,
+    selectedEpisodeId: state.selectedEpisodeId,
+    setEpisodeFolders,
+    setEpisodes,
+    setSelectedFolderId,
+    handleSelectEpisodeFromStorage,
+    sidebarWidthPx,
+    exportDir,
+  });
 
-      if (import.meta.env.DEV) {
-        console.log("[amverge] userHasHEVC:", userHasHEVC.current);
-      }
-    } catch {
-      userHasHEVC.current = false;
-    }
-  }, []);
+  useDragDropImport({
+    setIsDragging,
+    handleImport,
+    handleBatchImport,
+  });
 
-  const snapGridBigger = () => {
-    setCols(c => Math.max(1, c - 1));
-  };
+  // Episode selection
+  function handleSelectEpisode(episodeId: string) {
+    dispatch({ type: "setSelectedEpisodeId", value: episodeId });
+    dispatch({ type: "setSelectedFolderId", value: null });
 
-  const detectScenes = async (videoPath: string) => {
-    // calls backend passing in video file and threshold
-    const result = await invoke<string>("detect_scenes", {
-      videoPath: videoPath,
-    });
-
-    // contains path to all clips along w other metadata
-    const scenes = JSON.parse(result);
-
-    // turns to an array of objects
-    return scenes.map((s: any) => ({
-      id: crypto.randomUUID(),
-      src: s.path,
-      thumbnail: s.thumbnail,
-      originalName: s.original_file
-    }));
-  };
-
-  const onImportClick = async () => {
-    const file = await open({
-      multiple: false,
-      filters: [
-        {
-          name: "Video",
-          extensions: ["mp4", "mkv", "mov"]
-        }
-      ]
-    });
-
-    handleImport(file)
+    const episode = state.episodes.find((e) => e.id === episodeId);
+    dispatch({ type: "setClips", value: episode ? episode.clips : [] });
   }
 
-  const handleImport = async (file: string | null) => {
-    // This opens the file dialog to select a video file
-    if (!file) return;
+  function handleOpenEpisode(episodeId: string) {
+    const episode = state.episodes.find((e) => e.id === episodeId);
+    if (!episode) return;
+
+    dispatch({ type: "setSelectedEpisodeId", value: episodeId });
+    dispatch({ type: "setOpenedEpisodeId", value: episodeId });
+    dispatch({ type: "setSelectedFolderId", value: null });
+    dispatch({ type: "setClips", value: episode.clips });
+  }
+
+  function handleSelectEpisodeFromStorage(
+    episodeId: string | null,
+    episodesList?: typeof state.episodes
+  ) {
+    dispatch({ type: "setSelectedEpisodeId", value: episodeId ?? null });
+    dispatch({ type: "setSelectedFolderId", value: null });
+
+    if (episodeId && Array.isArray(episodesList)) {
+      const episode = episodesList.find((e) => e.id === episodeId);
+      dispatch({ type: "setClips", value: episode ? episode.clips : [] });
+    } else {
+      dispatch({ type: "setClips", value: [] });
+    }
+  }
+
+  // UI handlers
+  function snapGridBigger() {
+    setCols((c) => Math.max(1, c - 1));
+  }
+
+  function snapGridSmaller() {
+    setCols((c) => Math.min(12, c + 1));
+  }
+
+  function startSidebarResize(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sideBarEnabled) return;
+
+    const wrapper = windowWrapperRef.current;
+    if (!wrapper) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const pointerId = e.pointerId;
+    e.currentTarget.setPointerCapture(pointerId);
+    document.body.classList.add("is-resizing-sidebar");
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const rect = wrapper.getBoundingClientRect();
+      const minWidth = 220;
+      const maxWidth = Math.max(minWidth, Math.floor(rect.width * 0.6));
+      const proposed = Math.round(ev.clientX - rect.left);
+      const clamped = Math.min(maxWidth, Math.max(minWidth, proposed));
+
+      setSidebarWidthPx(clamped);
+    };
+
+    const stop = () => {
+      document.body.classList.remove("is-resizing-sidebar");
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  }
+
+  // Backend actions
+  async function handleClearEpisodePanelCache() {
+    dispatch({ type: "setEpisodeFolders", value: [] });
+    dispatch({ type: "setEpisodes", value: [] });
+    dispatch({ type: "setSelectedFolderId", value: null });
+    dispatch({ type: "setSelectedEpisodeId", value: null });
+    dispatch({ type: "setOpenedEpisodeId", value: null });
+    dispatch({ type: "setSelectedClips", value: new Set() });
+    dispatch({ type: "setFocusedClip", value: null });
+    dispatch({ type: "setClips", value: [] });
+    dispatch({ type: "setImportedVideoPath", value: null });
+    dispatch({ type: "setVideoIsHEVC", value: null });
 
     try {
-      setIsEmpty(false);
-      setProgress(0);
-      setProgressMsg("Starting...");
-      setLoading(true);
-      setImportedVideoPath(file)
-      setVideoIsHEVC(null);
-      setImportToken(Date.now().toString());
-      const formatted = await detectScenes(file);
-      setClips(formatted); // sets all the clips which gets passed to MainLayout
+      await invoke("clear_episode_panel_cache");
     } catch (err) {
-      console.error("Detection failed:", err);
-    } finally {
-      setLoading(false);
+      console.error("clear_episode_panel_cache failed:", err);
     }
-  };
-  
-  const handleExport = async(selectedClips: Set<string>, mergeEnabled: boolean) => {
-    if (selectedClips.size === 0) return;
+  }
 
-    const selected = clips.filter(c => selectedClips.has(c.id));
-    if (selected.length === 0) return;
+  async function handleAbort() {
+    abortedRef.current = true;
 
     try {
-      setLoading(true);
-
-      const clipArray = selected.map(c => c.src);
-
-      if (mergeEnabled) {
-        const episodeName = selected[0]?.originalName || "episode";
-        const suffix = String(Math.floor(Math.random() * 999) + 1).padStart(3, "0");
-        const defaultName = `${episodeName}_merged_${suffix}.mp4`;
-
-        const savePath = await save({
-          filters: [
-            {
-              name: "Video",
-              extensions: ["mp4"],
-            },
-          ],
-          defaultPath: defaultName,
-        });
-
-        if (!savePath) return;
-
-        await invoke("export_clips", {
-          clips: clipArray,
-          savePath: savePath,
-          mergeEnabled: mergeEnabled,
-        });
-      } else {
-        const firstClipPath = selected[0]?.src || "";
-        const firstFile = firstClipPath.split(/[/\\]/).pop() || "episode_0000.mp4";
-        const firstStem = firstFile.replace(/\.[^/.]+$/, "");
-        const defaultBase = firstStem.replace(/_\d{4}$/, "");
-
-        const savePath = await save({
-          title: "Choose base name for exported clips",
-          filters: [
-            {
-              name: "Video",
-              extensions: ["mp4"],
-            },
-          ],
-          defaultPath: `${defaultBase}_####.mp4`,
-        });
-
-        if (!savePath) return;
-
-        await invoke("export_clips", {
-          clips: clipArray,
-          savePath: savePath,
-          mergeEnabled: false,
-        });
-      }
-      
-      console.log("Export complete");
+      await invoke("abort_detect_scenes");
     } catch (err) {
-      console.log("Export failed:", err)
-    } finally {
-      setLoading(false);
+      console.error("abort_detect_scenes failed:", err);
     }
-  };
+  }
 
-  const snapGridSmaller = () => {
-    setCols(c => Math.min(12, c + 1));
-  };
-
-  // loading effect
+  // Effects
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
     (async () => {
       const stop = await listen<{ percent: number; message: string }>(
         "scene_progress",
-        (event) => {
+        (event: Event<{ percent: number; message: string }>) => {
           setProgress(event.payload.percent);
           setProgressMsg(event.payload.message);
         }
       );
+
       unlisten = stop;
     })();
+
     return () => {
       if (unlisten) unlisten();
     };
   }, []);
 
-
-  // drag & drop files effect
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
-
-    const init = async () => {
-      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        const type = event.payload.type;
-
-        if (type === "over") {
-          // Only show the overlay for true external file drags.
-          const paths = (event.payload as { paths?: string[] }).paths;
-          const hasPaths = Array.isArray(paths) && paths.length > 0;
-          setIsDragging(hasPaths);
-          return;
-        }
-
-        if (type === "drop") {
-          setIsDragging(false);
-
-          const file = event.payload.paths?.[0];
-          if (!file) return;
-
-          handleImport(file);
-          return;
-        }
-
-        setIsDragging(false);
-      });
-    }
-
-    init();
-    
-    return () => {
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
-
-  // checking if video is hevc useEffect
-  useEffect(() => {
-    if (!importedVideoPath) {
-      setVideoIsHEVC(null);
+    if (!state.importedVideoPath) {
+      dispatch({ type: "setVideoIsHEVC", value: null });
       return;
     }
 
     let cancelled = false;
 
-    // Mark as "checking" for this import so hover previews can avoid black-screen attempts.
-    setVideoIsHEVC(null);
+    dispatch({ type: "setVideoIsHEVC", value: null });
 
     (async () => {
       try {
         const hevc = await invoke<boolean>("check_hevc", {
-          videoPath: importedVideoPath
+          videoPath: state.importedVideoPath,
         });
 
-        if (!cancelled) setVideoIsHEVC(hevc)
+        if (!cancelled) {
+          dispatch({ type: "setVideoIsHEVC", value: hevc });
+        }
       } catch (err) {
-        console.error("check_hevc failed:", err)
-        if (!cancelled) setVideoIsHEVC(false);
+        console.error("check_hevc failed:", err);
+
+        if (!cancelled) {
+          dispatch({ type: "setVideoIsHEVC", value: false });
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [importedVideoPath, importToken])
+  }, [state.importedVideoPath, importToken, dispatch]);
+
+  useEffect(() => {
+    const update = () => {
+      const ww = windowWrapperRef.current;
+      const ml = mainLayoutWrapperRef.current;
+
+      if (!ww || !ml) return;
+
+      const wwRect = ww.getBoundingClientRect();
+      const mlRect = ml.getBoundingClientRect();
+
+      const wwCenterY = wwRect.top + wwRect.height / 2;
+      const mlCenterY = mlRect.top + mlRect.height / 2;
+      const offsetPx = mlCenterY - wwCenterY;
+
+      setDividerOffsetPx((prev) =>
+        Math.abs(prev - offsetPx) < 0.5 ? prev : offsetPx
+      );
+    };
+
+    update();
+
+    const ro = new ResizeObserver(() => update());
+
+    if (mainLayoutWrapperRef.current) {
+      ro.observe(mainLayoutWrapperRef.current);
+    }
+
+    window.addEventListener("resize", update);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [activePage, sideBarEnabled]);
 
   return (
-    <main className="app-root">
-      {loading && (
-        <div className="loading-overlay">
-          <div className="spinner" />
-          <div className="loading-text">
-
-            <div>{progressMsg}</div>
-            <div>{progress}%</div>
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isDragging && (
-        <div className="dragging-overlay">
-          <h1>Drag file(s) here.</h1>
-        </div>
-
-      )}
-      <div className="window-wrapper">
-        {/* {sideBarEnabled && <Sidebar/>} */}
-        <div className="content-wrapper">
-          <Navbar 
-           setSideBarEnabled={setSideBarEnabled}
-           userHasHEVC={userHasHEVC}
-           videoIsHEVC={videoIsHEVC}/>
-          <div className="main-content">
-            <ImportButtons 
-              cols={cols}
-              gridSize={gridSize}
-              onBigger={snapGridBigger}
-              onSmaller={snapGridSmaller}
-              setGridPreview={setGridPreview}
-              gridPreview={gridPreview}
-              selectedClips={selectedClips}
-              setSelectedClips={setSelectedClips}
-              onImport={onImportClick}
-              loading={loading}
-            />
-            <MainLayout 
+    <>
+    <UpdateBanner />
+    <AppLayout
+      windowWrapperRef={windowWrapperRef}
+      isDragging={isDragging}
+      loadingOverlay={
+        loading ? (
+          <LoadingOverlay
+            progress={progress}
+            progressMsg={progressMsg}
+            batchTotal={batchTotal}
+            batchDone={batchDone}
+            batchCurrentFile={batchCurrentFile}
+            onAbort={handleAbort}
+          />
+        ) : null
+      }
+      sidebarProps={{
+        sideBarEnabled,
+        activePage,
+        setActivePage,
+        episodeFolders: state.episodeFolders,
+        episodes: state.episodes,
+        selectedEpisodeId: state.selectedEpisodeId,
+        openedEpisodeId: state.openedEpisodeId,
+        selectedFolderId: state.selectedFolderId,
+        onSelectFolder: handleSelectFolder,
+        onToggleFolderExpanded: handleToggleFolderExpanded,
+        onCreateFolder: handleCreateFolder,
+        onSelectEpisode: handleSelectEpisode,
+        onOpenEpisode: handleOpenEpisode,
+        onDeleteEpisode: handleDeleteEpisode,
+        onRenameEpisode: handleRenameEpisode,
+        onRenameFolder: handleRenameFolder,
+        onDeleteFolder: handleDeleteFolder,
+        onMoveEpisodeToFolder: handleMoveEpisodeToFolder,
+        onMoveEpisode: handleMoveEpisode,
+        onMoveFolder: handleMoveFolder,
+        onSortEpisodePanel: handleSortEpisodePanel,
+        onClearEpisodePanelCache: handleClearEpisodePanelCache,
+      }}
+      navbarProps={{
+        setSideBarEnabled,
+        sideBarEnabled,
+        userHasHEVC,
+        videoIsHEVC: state.videoIsHEVC,
+      }}
+      dividerProps={{
+        onPointerDown: startSidebarResize,
+        dividerOffsetPx,
+        sidebarWidthPx,
+      }}
+    >
+      <div className="main-content">
+        {activePage === "home" ? (
+          <HomePage
             cols={cols}
             gridSize={gridSize}
-            gridRef={gridRef}
+            snapGridBigger={snapGridBigger}
+            snapGridSmaller={snapGridSmaller}
+            setGridPreview={setGridPreview}
             gridPreview={gridPreview}
-            selectedClips={selectedClips}
+            selectedClips={state.selectedClips}
             setSelectedClips={setSelectedClips}
-            clips={clips}
-            importToken={importToken}
+            onImportClick={onImportClick}
             loading={loading}
+            mainLayoutWrapperRef={mainLayoutWrapperRef}
+            gridRef={gridRef}
+            clips={state.clips}
+            importToken={importToken}
             isEmpty={isEmpty}
             handleExport={handleExport}
             sideBarEnabled={sideBarEnabled}
-            videoIsHEVC={videoIsHEVC}
+            videoIsHEVC={state.videoIsHEVC}
             userHasHEVC={userHasHEVC}
-            focusedClip={focusedClip}
+            focusedClip={state.focusedClip}
             setFocusedClip={setFocusedClip}
+            exportDir={exportDir}
+            onPickExportDir={handlePickExportDir}
+            onExportDirChange={(dir: string) => setExportDir(dir || null)}
+            defaultMergedName={(state.clips[0]?.originalName || "episode") + "_merged"}
+            openedEpisodeId={state.openedEpisodeId}
+            importedVideoPath={state.importedVideoPath}
+            detectionSettings={detectionSettings}
+            onDetectionSettingsChange={setDetectionSettings}
           />
-          </div>
-        </div>
+        ) : (
+          <Menu />
+        )}
       </div>
-    </main>
+    </AppLayout>
+    </>
   );
 }
 
