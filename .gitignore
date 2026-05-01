@@ -34,6 +34,13 @@ frontend/src-tauri/bin/
 frontend/src-tauri/gen/schemas/
 
 #############################################
+# Local AI / editor context files
+#############################################
+CLAUDE.md
+AGENTS.md
+.claude/
+
+#############################################
 # Editors / OS
 #############################################
 **/.vscode/*
@@ -85,7 +92,7 @@ lerna-debug.log*
 *.mpeg
 *.vob
 
-# Audio (often large)
+# Audio
 *.mp3
 *.m4a
 *.flac
