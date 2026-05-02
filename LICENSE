@@ -1,12 +1,35 @@
-Copyright (c) 2026 anh9000
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
 
-Permission is granted to use, copy, and share this software for personal
-and non-commercial purposes only, provided credit is given to the original
-author (anh9000).
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
 
-The following are NOT permitted without explicit written permission:
-- Commercial use of this software or its design
-- Selling or monetizing this software or derivatives of it
-- Removing or replacing the branding, name, or visual identity
+ Full license text: https://www.gnu.org/licenses/gpl-3.0.txt
 
-This software is provided as-is with no warranty.
+-------------------------------------------------------------------------------
+
+AMVerge Plus is a fork of AMVerge by crptk (https://github.com/crptk/AMVerge),
+licensed under the GNU General Public License v3.0.
+
+AMVerge Plus includes substantial modifications and additions by anh9000:
+- Cross-platform support (Windows, macOS, Linux)
+- Custom anime scene detection algorithm (dHash + Canny edge analysis)
+- Content-aware detection modes (Live-action, Music Video)
+- Keyframe snapping for clean stream-copy cuts
+- Audio codec detection and AAC fallback
+- Clip rename panel
+- Multi-platform CI/CD (GitHub Actions)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
