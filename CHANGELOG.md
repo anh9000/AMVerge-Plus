@@ -3,12 +3,12 @@
 ## [0.5.0] - 2026-05-01
 
 ### Added
-- In-app update checker — checks GitHub releases on startup (3s delay)
-- One-click update download with progress bar — downloads, extracts, and relaunches automatically
+- In-app update checker, checks GitHub releases on startup (3s delay)
+- One-click update download with progress bar, downloads, extracts, and relaunches automatically
 - New signing keypair for update verification
 
 ### Fixed
-- Orphaned ffmpeg processes after app close — process tree now killed on window destroy
+- Orphaned ffmpeg processes after app close, process tree now killed on window destroy
 
 ### Security
 - Content Security Policy enabled (was completely disabled)

@@ -6,12 +6,12 @@ This repo is a fork of [crptk/AMVerge](https://github.com/crptk/AMVerge).
 # Fetch upstream changes
 git fetch upstream
 
-# Merge — expect conflicts in the files listed below
+# Merge (expect conflicts in the files listed below)
 git merge upstream/main
 ```
 
 During a conflict, use this guide to decide what to keep.  
-Any line tagged `// [AMVerge Plus]` or `{/* [AMVerge Plus] */}` in source files is **ours — always keep it**.
+Any line tagged `// [AMVerge Plus]` or `{/* [AMVerge Plus] */}` in source files is **ours, always keep it**.
 
 ---
 
@@ -32,21 +32,21 @@ Accept ours unconditionally in any conflict.
 
 ### `frontend/src-tauri/src/main.rs`
 
-Our additions — keep all of these on merge:
+Our additions - keep all of these on merge:
 
 | What | Where |
 |------|-------|
 | `parse_version()` helper | Update check section |
-| `check_for_update` command | Hits **anh9000/AMVerge-Plus** GitHub API — keep our URL, not upstream's |
+| `check_for_update` command | Hits **anh9000/AMVerge-Plus** GitHub API - keep our URL, not upstream's |
 | `download_and_apply_update` command | In-app one-click updater |
 | `EncoderInfo` struct | GPU section |
 | `probe_hardware_encoders` command | GPU section |
 | `remux_video` command | Remux section |
 | `video_encoder_args(encoder)` helper | Inside `export_clips` |
-| `ffmpeg_reencode_ae_args(input, output, encoder)` | Accepts encoder param — keep the extra arg |
-| `detect_scenes` — extra params | `detection_mode`, `min_duration`, `sensitivity` + `extra_args` vec |
-| `export_clips` — extra params | `remux_enabled: bool`, `video_encoder: Option<String>` |
-| `invoke_handler` entries | `remux_video`, `probe_hardware_encoders` — keep both |
+| `ffmpeg_reencode_ae_args(input, output, encoder)` | Accepts encoder param - keep the extra arg |
+| `detect_scenes` - extra params | `detection_mode`, `min_duration`, `sensitivity` + `extra_args` vec |
+| `export_clips` - extra params | `remux_enabled: bool`, `video_encoder: Option<String>` |
+| `invoke_handler` entries | `remux_video`, `probe_hardware_encoders` - keep both |
 
 **Merge strategy for `invoke_handler`:** upstream adds new entries at the bottom of the list; ours are also near the bottom with a comment separator. Accept both sides.
 
@@ -123,4 +123,4 @@ Our additions — keep all of these on merge:
 grep -rn "\[AMVerge Plus\]" frontend/src
 ```
 
-All our non-trivial additions carry this tag — if a line is missing after a merge it needs to be restored.
+All our non-trivial additions carry this tag - if a line is missing after a merge it needs to be restored.
