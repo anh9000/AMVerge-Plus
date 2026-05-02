@@ -45,10 +45,10 @@
   --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.09);
   --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.20);
 
-  /* Background gradient blob colours — lime/green theme */
-  --blob-1: rgba(30, 120, 20, 0.60);
-  --blob-2: rgba(10, 80, 10, 0.50);
-  --blob-3: rgba(100, 200, 0, 0.25);
+  /* Background gradient blob colours — subtle lime hints */
+  --blob-1: rgba(30, 100, 15, 0.28);
+  --blob-2: rgba(10, 60, 10, 0.22);
+  --blob-3: rgba(80, 160, 0, 0.14);
 
   /* Border beam colours */
   --beam-color-1: rgba(175, 255, 0, 0.90);
@@ -170,13 +170,61 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.36); }
 
 /* ============================================================
-   BORDER BEAM — animated lime highlight sweeping around panels
-   Usage: add class "has-beam" to any glass panel element.
-   A pseudo conic-gradient rotates continuously inside the border.
+   BORDER BEAM — a short bright streak travelling around the border.
+   Each panel gets its own ::before (beam track) + ::after (beam dot).
+   The streak is a radial glow sliding along the perimeter via
+   offset-path / offset-distance animation.
    ============================================================ */
-@keyframes border-beam-spin {
-  0%   { --beam-angle: 0deg; }
-  100% { --beam-angle: 360deg; }
+@keyframes beam-travel {
+  0%   { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+
+.has-beam {
+  position: relative;
+  /* no overflow:visible — panels must not bleed */
+}
+
+/* Faint static border acts as the beam track */
+.has-beam::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(175, 255, 0, 0.12);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* The travelling beam streak */
+.has-beam::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+  background: transparent;
+  /* Beam streak: tight radial glow anchored to border via conic mask */
+  --beam-size: 120px;
+  --beam-angle: 0deg;
+  background-image: conic-gradient(
+    from var(--beam-angle) at 50% 0%,
+    transparent 0deg,
+    rgba(175, 255, 0, 0.0) 340deg,
+    rgba(175, 255, 0, 0.9) 355deg,
+    rgba(255, 255, 255, 1.0) 360deg,
+    rgba(175, 255, 0, 0.9) 365deg,
+    rgba(175, 255, 0, 0.0) 380deg,
+    transparent 400deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  padding: 1px;
+  animation: border-beam-rotate 4s linear infinite;
 }
 
 @property --beam-angle {
@@ -185,38 +233,12 @@ a { color: inherit; text-decoration: none; }
   initial-value: 0deg;
 }
 
-.has-beam {
-  position: relative;
+@keyframes border-beam-rotate {
+  from { --beam-angle: 0deg; }
+  to   { --beam-angle: 360deg; }
 }
 
-.has-beam::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent 0%,
-    transparent 30%,
-    var(--beam-color-1) 48%,
-    var(--beam-color-2) 52%,
-    transparent 70%,
-    transparent 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
-  animation: border-beam-spin 3.5s linear infinite;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.75;
-}
-
-/* Beam is dimmer on light panels */
-[data-theme="light"] .has-beam::before { opacity: 0.55; }
+[data-theme="light"] .has-beam::after { opacity: 0.60; }
 
 /* ============================================================
    SMOOTH THEME TRANSITION
