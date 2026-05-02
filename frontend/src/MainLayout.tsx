@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ClipsContainer from "./components/clipsGrid/ClipsContainer.tsx";
 import PreviewContainer from "./components/previewPanel/PreviewContainer.tsx";
 import DetectionSettingsPanel from "./components/DetectionSettings.tsx";
-import BorderBeam from "./components/BorderBeam.tsx";
 import { DetectionSettings } from "./utils/episodeUtils";
 import { ClipItem } from "./types/domain";
 
@@ -91,7 +90,6 @@ export default function MainLayout(props: LayoutProps) {
         <div className="split-layout">
             {/* CENTER: Video player pane */}
             <div className="player-pane" style={{ width: `${leftWidth}%` }}>
-                <BorderBeam duration={5000} />
                 <PreviewContainer
                     focusedClip={props.focusedClip}
                     focusedClipThumbnail={focusedClipThumbnail}
@@ -117,7 +115,6 @@ export default function MainLayout(props: LayoutProps) {
 
             {/* RIGHT: Scene detection results pane */}
             <div className="clips-pane" style={{ width: `${100 - leftWidth}%` }}>
-                <BorderBeam duration={6000} />
                 {/* Clips toolbar: detection settings + grid controls */}
                 <div className="clips-toolbar">
                     <DetectionSettingsPanel

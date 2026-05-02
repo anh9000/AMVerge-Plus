@@ -1,4 +1,5 @@
 import React from "react";
+import { BorderBeam } from "border-beam";
 import Sidebar from "./sidebar/Sidebar";
 import Navbar from "./Navbar";
 
@@ -25,8 +26,18 @@ export default function AppLayout({
   loadingOverlay,
   isDragging,
 }: AppLayoutProps) {
+  const { isDarkMode } = navbarProps;
+
   return (
-    <main className="app-root">
+    <BorderBeam
+      size="md"
+      colorVariant="colorful"
+      theme={isDarkMode ? "dark" : "light"}
+      duration={5}
+      strength={0.65}
+      borderRadius={14}
+      className="app-root"
+    >
       {loadingOverlay}
       {isDragging && (
         <div className="dragging-overlay">
@@ -66,6 +77,6 @@ export default function AppLayout({
           {children}
         </div>
       </div>
-    </main>
+    </BorderBeam>
   );
 }
