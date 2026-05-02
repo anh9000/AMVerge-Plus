@@ -127,12 +127,16 @@ export default function MainLayout(props: LayoutProps) {
                             {props.selectedClips.size > 0 ? `${props.selectedClips.size} sel` : ""}
                         </span>
                         <label className="clips-toolbar-check">
+                            <span className="custom-checkbox">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox"
+                                    checked={props.gridPreview}
+                                    onChange={(e) => props.setGridPreview(e.target.checked)}
+                                />
+                                <span className="checkmark"></span>
+                            </span>
                             <span>Preview</span>
-                            <input
-                                type="checkbox"
-                                checked={props.gridPreview}
-                                onChange={(e) => props.setGridPreview(e.target.checked)}
-                            />
                         </label>
                         <div className="clips-toolbar-zoom">
                             <button onClick={props.snapGridSmaller} title="Smaller grid">−</button>
