@@ -49,7 +49,7 @@ function App() {
   const [cols, setCols] = useState(6);
   const [isDragging, setIsDragging] = useState(false);
   const [sideBarEnabled, setSideBarEnabled] = useState(true);
-  const [activePage, setActivePage] = useState<Page>("home");
+  const [activePage, setActivePage] = useState<Page>("clipping");
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("Starting...");
   const [dividerOffsetPx, setDividerOffsetPx] = useState(0);
@@ -254,7 +254,7 @@ function App() {
     const onPointerMove = (ev: PointerEvent) => {
       const rect = wrapper.getBoundingClientRect();
       const minWidth = 220;
-      const maxWidth = Math.max(minWidth, Math.floor(rect.width * 0.6));
+      const maxWidth = Math.min(380, Math.floor(rect.width * 0.4));
       const proposed = Math.round(ev.clientX - rect.left);
       const clamped = Math.min(maxWidth, Math.max(minWidth, proposed));
 
@@ -414,6 +414,8 @@ function App() {
         sideBarEnabled,
         activePage,
         setActivePage,
+        onImportClick,
+        isLoading: loading,
         episodeFolders: state.episodeFolders,
         episodes: state.episodes,
         selectedEpisodeId: state.selectedEpisodeId,
@@ -437,10 +439,10 @@ function App() {
       navbarProps={{
         setSideBarEnabled,
         sideBarEnabled,
-        isDarkMode,        // [AMVerge Plus]
-        onThemeToggle: handleThemeToggle, // [AMVerge Plus]
-        activePage,        // [AMVerge Plus]
-        setActivePage,     // [AMVerge Plus]
+        isDarkMode,
+        onThemeToggle: handleThemeToggle,
+        activePage,
+        setActivePage,
       }}
       dividerProps={{
         onPointerDown: startSidebarResize,
@@ -449,7 +451,7 @@ function App() {
       }}
     >
       <div className="main-content">
-        {activePage === "home" ? (
+        {activePage === "clipping" ? (
           <HomePage
             cols={cols}
             gridSize={gridSize}
@@ -459,7 +461,6 @@ function App() {
             gridPreview={gridPreview}
             selectedClips={state.selectedClips}
             setSelectedClips={setSelectedClips}
-            onImportClick={onImportClick}
             loading={loading}
             mainLayoutWrapperRef={mainLayoutWrapperRef}
             gridRef={gridRef}

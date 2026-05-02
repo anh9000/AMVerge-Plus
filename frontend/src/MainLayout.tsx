@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ClipsContainer from "./components/clipsGrid/ClipsContainer.tsx";
 import PreviewContainer from "./components/previewPanel/PreviewContainer.tsx";
+import DetectionSettingsPanel from "./components/DetectionSettings.tsx";
+import { DetectionSettings } from "./utils/episodeUtils";
+import { ClipItem } from "./types/domain";
 
 type LayoutProps = {
     cols: number;
@@ -9,10 +12,9 @@ type LayoutProps = {
     gridPreview: boolean;
     setGridPreview: React.Dispatch<React.SetStateAction<boolean>>;
     selectedClips: Set<string>;
-    setSelectedClips: React.Dispatch<
-        React.SetStateAction<Set<string>>
-    >;
-    clips: { id: string; src: string; thumbnail: string }[];
+    setSelectedClips: React.Dispatch<React.SetStateAction<Set<string>>>;
+    clips: ClipItem[];
+    setClips: (clips: ClipItem[]) => void;
     importToken: string;
     loading: boolean;
     isEmpty: boolean;
@@ -24,17 +26,22 @@ type LayoutProps = {
     ) => Promise<void>;
     sideBarEnabled: boolean;
     videoIsHEVC: boolean | null;
-    userHasHEVC: React.RefObject<boolean>
+    userHasHEVC: React.RefObject<boolean>;
     focusedClip: string | null;
-    setFocusedClip: React.Dispatch<React.SetStateAction<string | null>>
+    setFocusedClip: React.Dispatch<React.SetStateAction<string | null>>;
     exportDir: string | null;
     onPickExportDir: () => void;
     onExportDirChange: (dir: string) => void;
     defaultMergedName: string;
+    snapGridBigger: () => void;
+    snapGridSmaller: () => void;
+    detectionSettings: DetectionSettings;
+    onDetectionSettingsChange: (s: DetectionSettings) => void;
 };
 
 export default function MainLayout(props: LayoutProps) {
-    const [leftWidth, setLeftWidth] = useState(65);
+    // Default 50/50 split — player center, clips right
+    const [leftWidth, setLeftWidth] = useState(50);
 
     const focusedClipThumbnail = useMemo(
         () =>
@@ -44,7 +51,6 @@ export default function MainLayout(props: LayoutProps) {
         [props.focusedClip, props.clips]
     );
 
-    // track active resize listeners so we can clean up on unmount.
     const resizeCleanupRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
@@ -58,16 +64,14 @@ export default function MainLayout(props: LayoutProps) {
         const container = e.currentTarget.parentElement as HTMLElement;
         const leftPane = container.children[0] as HTMLElement;
 
-
         const startLeftWidth = leftPane.offsetWidth;
         const totalWidth = container.offsetWidth;
 
         const onMouseMove = (ev: MouseEvent) => {
             const delta = ev.clientX - startX;
-            const newPercent =
-                ((startLeftWidth + delta) / totalWidth) * 100;
-            
-            setLeftWidth(Math.min(85, Math.max(15, newPercent)));
+            const newPercent = ((startLeftWidth + delta) / totalWidth) * 100;
+            // 25%–75% limits on both panes
+            setLeftWidth(Math.min(75, Math.max(25, newPercent)));
         };
 
         const onMouseUp = () => {
@@ -76,17 +80,68 @@ export default function MainLayout(props: LayoutProps) {
             resizeCleanupRef.current = null;
         };
 
-        // remove any stale listeners before attaching new ones.
         resizeCleanupRef.current?.();
-
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
         resizeCleanupRef.current = onMouseUp;
     }, []);
+
     return (
         <div className="split-layout">
-            <div className="left-pane" style={{ width: `${leftWidth}%`}}>
-                <ClipsContainer 
+            {/* CENTER: Video player pane */}
+            <div className="player-pane" style={{ width: `${leftWidth}%` }}>
+                <PreviewContainer
+                    focusedClip={props.focusedClip}
+                    focusedClipThumbnail={focusedClipThumbnail}
+                    selectedClips={props.selectedClips}
+                    handleExport={props.handleExport}
+                    videoIsHEVC={props.videoIsHEVC}
+                    userHasHEVC={props.userHasHEVC}
+                    importToken={props.importToken}
+                    exportDir={props.exportDir}
+                    onPickExportDir={props.onPickExportDir}
+                    onExportDirChange={props.onExportDirChange}
+                    defaultMergedName={props.defaultMergedName}
+                />
+            </div>
+
+            <div
+                className="divider"
+                onMouseDown={(e) => startResize(e)}
+            >
+                <span className="subdivider"/>
+                <span className="subdivider"/>
+            </div>
+
+            {/* RIGHT: Scene detection results pane */}
+            <div className="clips-pane" style={{ width: `${100 - leftWidth}%` }}>
+                {/* Clips toolbar: detection settings + grid controls */}
+                <div className="clips-toolbar">
+                    <DetectionSettingsPanel
+                        settings={props.detectionSettings}
+                        onChange={props.onDetectionSettingsChange}
+                        disabled={props.loading}
+                    />
+                    <div className="clips-toolbar-right">
+                        <span className="clips-sel-count">
+                            {props.selectedClips.size > 0 ? `${props.selectedClips.size} sel` : ""}
+                        </span>
+                        <label className="clips-toolbar-check">
+                            <span>Preview</span>
+                            <input
+                                type="checkbox"
+                                checked={props.gridPreview}
+                                onChange={(e) => props.setGridPreview(e.target.checked)}
+                            />
+                        </label>
+                        <div className="clips-toolbar-zoom">
+                            <button onClick={props.snapGridSmaller} title="Smaller grid">−</button>
+                            <button onClick={props.snapGridBigger} title="Larger grid">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <ClipsContainer
                     gridSize={props.gridSize}
                     gridRef={props.gridRef}
                     cols={props.cols}
@@ -101,35 +156,8 @@ export default function MainLayout(props: LayoutProps) {
                     userHasHEVC={props.userHasHEVC}
                     setFocusedClip={props.setFocusedClip}
                     focusedClip={props.focusedClip}
-                 />
-            </div>
-            
-    
-            <div
-                className="divider"
-                onMouseDown={(e) => startResize(e)}
-            >
-                <span className="subdivider"/>
-
-                <span className="subdivider"/>
-            </div>
-
-
-            <div className="right-pane" style={{ width: `${100 - leftWidth}%` }}>
-                <PreviewContainer 
-                    focusedClip={props.focusedClip}
-                    focusedClipThumbnail={focusedClipThumbnail}
-                    selectedClips={props.selectedClips}
-                    handleExport={props.handleExport}
-                    videoIsHEVC={props.videoIsHEVC}
-                    userHasHEVC={props.userHasHEVC}
-                    importToken={props.importToken}
-                    exportDir={props.exportDir}
-                    onPickExportDir={props.onPickExportDir}
-                    onExportDirChange={props.onExportDirChange}
-                    defaultMergedName={props.defaultMergedName}
                 />
             </div>
         </div>
-    )
+    );
 }

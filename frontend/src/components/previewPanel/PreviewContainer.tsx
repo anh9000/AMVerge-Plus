@@ -1,7 +1,7 @@
 import VideoPlayer from "./videoPlayer/VideoPlayer.tsx"
-import InfoBox from "./InfoBox.tsx"
 import React from "react";
 import { FaFolderOpen } from "react-icons/fa";
+
 type PreviewContainerProps = {
   focusedClip: string | null;
   focusedClipThumbnail: string | null;
@@ -13,7 +13,7 @@ type PreviewContainerProps = {
     selectedClips: Set<string>,
     enableMerged: boolean,
     mergeFileName?: string,
-    remuxEnabled?: boolean // [AMVerge Plus]
+    remuxEnabled?: boolean
   ) => Promise<void>;
   exportDir: string | null;
   onPickExportDir: () => void;
@@ -21,7 +21,7 @@ type PreviewContainerProps = {
   defaultMergedName: string;
 };
 
-export default function PreviewContainer (props: PreviewContainerProps) {
+export default function PreviewContainer(props: PreviewContainerProps) {
   const [mergeEnabled, setMergeEnabled] = React.useState(true);
   const [remuxEnabled, setRemuxEnabled] = React.useState(false);
   const [showMergeNameModal, setShowMergeNameModal] = React.useState(false);
@@ -50,19 +50,20 @@ export default function PreviewContainer (props: PreviewContainerProps) {
     setShowMergeNameModal(false);
     props.handleExport(props.selectedClips, true, value, remuxEnabled);
   };
+
   return (
-    <main  className="preview-container" >
+    <main className="preview-container">
       <div className="preview-window">
         {props.focusedClip ? (
-          <VideoPlayer 
-           selectedClip={props.focusedClip}
-           videoIsHEVC={props.videoIsHEVC}
-           userHasHEVC={props.userHasHEVC}
-           posterPath={props.focusedClipThumbnail}
-           importToken={props.importToken}
+          <VideoPlayer
+            selectedClip={props.focusedClip}
+            videoIsHEVC={props.videoIsHEVC}
+            userHasHEVC={props.userHasHEVC}
+            posterPath={props.focusedClipThumbnail}
+            importToken={props.importToken}
           />
-          ) : (
-            <p>No clip selected</p>
+        ) : (
+          <p>No clip selected</p>
         )}
       </div>
       <div className="preview-export">
@@ -106,16 +107,14 @@ export default function PreviewContainer (props: PreviewContainerProps) {
             <FaFolderOpen />
           </button>
         </div>
-        <button 
-          className="buttons" 
+        <button
+          className="buttons"
           id="file-button"
           onClick={onExportClick}
         >
           Export
         </button>
       </div>
-      
-      <InfoBox/>
 
       {showMergeNameModal && (
         <div

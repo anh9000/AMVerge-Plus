@@ -21,8 +21,15 @@ export default function Navbar({
     activePage,
     setActivePage,
 }: NavbarProps) {
+    // Use startDragging() instead of data-tauri-drag-region so buttons still receive clicks
+    const handleNavDrag = async (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest("button, a, input, select")) return;
+        try { await appWin.startDragging(); } catch { /* ignore */ }
+    };
+
     return (
-        <div className="navbar" data-tauri-drag-region>
+        <div className="navbar" onMouseDown={handleNavDrag}>
             {/* Left: sidebar toggle + wordmark */}
             <div className="nav-left">
                 <button
@@ -45,16 +52,16 @@ export default function Navbar({
             {/* Center: page navigation tabs */}
             <nav className="nav-tabs">
                 <button
-                    className={`nav-tab${activePage === "home" ? " active" : ""}`}
-                    onClick={() => setActivePage("home")}
+                    className={`nav-tab${activePage === "clipping" ? " active" : ""}`}
+                    onClick={() => setActivePage("clipping")}
                 >
-                    Home
+                    CLIPPING
                 </button>
                 <button
-                    className={`nav-tab${activePage === "menu" ? " active" : ""}`}
-                    onClick={() => setActivePage("menu")}
+                    className={`nav-tab${activePage === "editor" ? " active" : ""}`}
+                    onClick={() => setActivePage("editor")}
                 >
-                    Menu
+                    EDITOR
                 </button>
             </nav>
 

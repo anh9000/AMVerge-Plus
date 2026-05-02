@@ -1,11 +1,14 @@
 // Shared sidebar types. Defines props, menu state, modal state, drag/drop state, and page types.
 import type React from "react";
 
-export type Page = "home" | "menu";
+export type Page = "clipping" | "editor";
 
 export type SidebarProps = {
   activePage: Page;
   setActivePage: React.Dispatch<React.SetStateAction<Page>>;
+
+  onImportClick: () => void;
+  isLoading: boolean;
 
   episodeFolders: {
     id: string;
@@ -44,7 +47,7 @@ export type SidebarProps = {
   sideBarEnabled: boolean;
 };
 
-export type EpisodePanelProps = Omit<SidebarProps, "activePage" | "setActivePage">;
+export type EpisodePanelProps = Omit<SidebarProps, "activePage" | "setActivePage" | "onImportClick" | "isLoading">;
 
 export type EpisodeContextMenuState = {
   episodeId: string;

@@ -39,29 +39,30 @@
   --accent-glow:    rgba(255, 255, 255, 0.06);
 
   /* Glass panel system */
-  --glass-bg:     rgba(14, 12, 22, 0.82);
+  --glass-bg:     rgba(14, 12, 22, 0.58);
   --glass-blur:   blur(36px) saturate(1.6);
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
   --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.20);
 
   /* Background gradient blob colours (morphed per theme) */
-  --blob-1: rgba(55, 18, 95, 0.52);
-  --blob-2: rgba(16, 22, 88, 0.44);
-  --blob-3: rgba(38, 8, 68, 0.30);
+  --blob-1: rgba(90, 20, 160, 0.65);
+  --blob-2: rgba(20, 35, 130, 0.55);
+  --blob-3: rgba(60, 10, 100, 0.42);
 
   /* Focused clip glow */
   --glow-focus-a: rgba(110, 90, 200, 0.38);
   --glow-focus-b: rgba(130, 110, 220, 0.55);
 
   /* Layout */
-  --navbar-h:  44px;
-  --sidebar-w: var(--amverge-sidebar-width, 268px);
-  --radius-xl: 14px;
-  --radius-lg: 10px;
-  --radius-md: 7px;
-  --radius-sm: 5px;
-  --gap:       6px;
+  --navbar-h:    44px;
+  --sidebar-w:   var(--amverge-sidebar-width, 268px);
+  --radius-2xl:  20px;
+  --radius-xl:   14px;
+  --radius-lg:   10px;
+  --radius-md:   7px;
+  --radius-sm:   5px;
+  --gap:         6px;
 
   /* Motion */
   --t-fast: 90ms ease;
@@ -101,15 +102,15 @@
   --accent-dim:     rgba(0, 0, 0, 0.08);
   --accent-glow:    rgba(0, 0, 0, 0.04);
 
-  --glass-bg:     rgba(255, 255, 255, 0.78);
+  --glass-bg:     rgba(255, 255, 255, 0.62);
   --glass-blur:   blur(36px) saturate(2.0);
   --glass-border: 1px solid rgba(0, 0, 0, 0.07);
   --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.96);
-  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+  --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
 
-  --blob-1: rgba(185, 175, 252, 0.30);
-  --blob-2: rgba(172, 210, 255, 0.26);
-  --blob-3: rgba(220, 180, 255, 0.20);
+  --blob-1: rgba(140, 100, 240, 0.38);
+  --blob-2: rgba(80, 140, 255, 0.32);
+  --blob-3: rgba(200, 130, 255, 0.28);
 
   --glow-focus-a: rgba(100, 80, 190, 0.28);
   --glow-focus-b: rgba(120, 100, 210, 0.42);
@@ -370,7 +371,7 @@ a { color: inherit; text-decoration: none; }
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   box-shadow: var(--glass-sheen), var(--glass-shadow);
   overflow: hidden;
   z-index: 40;
@@ -454,6 +455,39 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
   overflow: hidden;
   gap: var(--gap);
+}
+
+/* ============================================================
+   SIDEBAR IMPORT BAR
+   ============================================================ */
+.sidebar-import-bar {
+  flex-shrink: 0;
+  padding: 10px 10px 6px;
+  border-bottom: var(--glass-border);
+}
+
+.sidebar-import-btn {
+  width: 100%;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hover);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.sidebar-import-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+.sidebar-import-btn:disabled {
+  opacity: 0.30;
+  cursor: not-allowed;
 }
 
 /* ============================================================
@@ -631,8 +665,8 @@ a { color: inherit; text-decoration: none; }
   gap: 0; /* inner divider is the gap */
 }
 
-/* Left pane — clips grid glass panel */
-.left-pane {
+/* Player pane — video player (center) */
+.player-pane {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -641,12 +675,12 @@ a { color: inherit; text-decoration: none; }
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   box-shadow: var(--glass-sheen), var(--glass-shadow);
 }
 
-/* Right pane — preview glass panel */
-.right-pane {
+/* Clips pane — scene detection results (right) */
+.clips-pane {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -655,7 +689,7 @@ a { color: inherit; text-decoration: none; }
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   box-shadow: var(--glass-sheen), var(--glass-shadow);
 }
 
@@ -846,6 +880,74 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ============================================================
+   CLIPS TOOLBAR (top bar inside clips-pane)
+   ============================================================ */
+.clips-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: var(--glass-border);
+}
+
+.clips-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.clips-sel-count {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  min-width: 28px;
+}
+
+.clips-toolbar-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.clips-toolbar-check input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.clips-toolbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.clips-toolbar-zoom button {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.clips-toolbar-zoom button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+/* ============================================================
    CLIPS GRID
    ============================================================ */
 .clips-container {
@@ -1019,7 +1121,7 @@ video.clip {
   justify-content: center;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.32);
-  border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
+  border-radius: calc(var(--radius-2xl) - 1px) calc(var(--radius-2xl) - 1px) 0 0;
 }
 
 [data-theme="light"] .preview-window {
@@ -1309,6 +1411,299 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
 .rename-panel input:focus,
 .rename-panel select:focus { border-color: var(--border-focus); }
 .rename-panel select option { background: #12111f; }
+
+/* ============================================================
+   EDITOR PAGE (Menu redesign — full-height glass layout)
+   ============================================================ */
+.editor-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  gap: var(--gap);
+  overflow: hidden;
+}
+
+/* Vertical nav sidebar */
+.editor-nav {
+  flex-shrink: 0;
+  width: 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
+  overflow: hidden;
+}
+
+.editor-nav-brand {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--text-muted);
+  padding: 0 8px 10px;
+  border-bottom: var(--glass-border);
+  margin-bottom: 6px;
+}
+
+.editor-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: background var(--t-fast), color var(--t-fast);
+  text-align: left;
+}
+
+.editor-nav-item:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.editor-nav-item.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
+}
+
+.editor-nav-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.editor-nav-item.active .editor-nav-icon { opacity: 1; }
+
+.editor-nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Content area */
+.editor-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Glass card that holds each section */
+.editor-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 28px;
+}
+
+/* Section inner styles — applies to all editor sections */
+.editor-card h3 {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.editor-card p,
+.editor-card li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.editor-card ul,
+.editor-card ol {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Remux section inside card */
+.remux-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.remux-title {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.remux-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.remux-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.remux-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  letter-spacing: 0.03em;
+}
+
+.remux-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.remux-path-input {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 11px;
+  transition: border-color var(--t-fast);
+}
+
+.remux-path-input:focus { border-color: var(--border-focus); }
+.remux-path-input::placeholder { color: var(--text-muted); }
+
+.remux-format-btns {
+  display: flex;
+  gap: 5px;
+}
+
+.remux-fmt-btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+
+.remux-fmt-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.remux-fmt-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--border-select);
+  color: var(--text-primary);
+}
+
+.remux-fmt-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+.remux-browse-btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  white-space: nowrap;
+}
+
+.remux-browse-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.remux-browse-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+.remux-run-btn {
+  align-self: flex-start;
+  height: 34px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hover);
+  background: var(--accent-dim);
+  color: var(--text-primary);
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.remux-run-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
+}
+
+.remux-run-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+.remux-result { display: flex; flex-direction: column; gap: 8px; }
+
+.remux-status {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.remux-status.running { color: var(--text-secondary); }
+.remux-status.done    { color: #6bcb77; }
+.remux-status.error   { color: #ff6b6b; }
+
+.remux-output-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.remux-error-msg {
+  font-size: 11px;
+  color: #ff6b6b;
+  word-break: break-all;
+}
+
+.remux-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  border-top: var(--glass-border);
+  padding-top: 12px;
+}
 
 /* ============================================================
    LOADING OVERLAY

@@ -1,4 +1,4 @@
-import ImportButtons from "../components/ImportButtons";
+import React from "react";
 import MainLayout from "../MainLayout";
 import { fileNameFromPath, DetectionSettings } from "../utils/episodeUtils";
 import { ClipItem } from "../types/domain";
@@ -13,7 +13,6 @@ interface HomePageProps {
   gridPreview: boolean;
   selectedClips: Set<string>;
   setSelectedClips: (val: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  onImportClick: () => void;
   loading: boolean;
   mainLayoutWrapperRef: React.RefObject<HTMLDivElement | null>;
   clips: ClipItem[];
@@ -51,7 +50,6 @@ export default function HomePage({
   gridPreview,
   selectedClips,
   setSelectedClips,
-  onImportClick,
   loading,
   mainLayoutWrapperRef,
   clips,
@@ -74,57 +72,43 @@ export default function HomePage({
   onDetectionSettingsChange,
 }: HomePageProps) {
   return (
-    <>
-      <ImportButtons
+    <div className="main-layout-wrapper" ref={mainLayoutWrapperRef}>
+      <MainLayout
         cols={cols}
         gridSize={gridSize}
-        onBigger={snapGridBigger}
-        onSmaller={snapGridSmaller}
-        setGridPreview={setGridPreview}
+        gridRef={gridRef}
         gridPreview={gridPreview}
+        setGridPreview={setGridPreview}
+        clips={clips}
+        setClips={setClips}
+        importToken={importToken}
+        isEmpty={isEmpty}
+        handleExport={handleExport}
+        sideBarEnabled={sideBarEnabled}
+        videoIsHEVC={videoIsHEVC}
+        userHasHEVC={userHasHEVC}
+        focusedClip={focusedClip}
+        setFocusedClip={setFocusedClip}
+        exportDir={exportDir}
+        onPickExportDir={onPickExportDir}
+        onExportDirChange={onExportDirChange}
+        defaultMergedName={defaultMergedName}
         selectedClips={selectedClips}
         setSelectedClips={setSelectedClips}
-        onImport={onImportClick}
         loading={loading}
+        snapGridBigger={snapGridBigger}
+        snapGridSmaller={snapGridSmaller}
         detectionSettings={detectionSettings}
         onDetectionSettingsChange={onDetectionSettingsChange}
-        clips={clips}
-        onClipsRenamed={setClips}
       />
 
-      <div className="main-layout-wrapper" ref={mainLayoutWrapperRef}>
-        <MainLayout
-          cols={cols}
-          gridSize={gridSize}
-          gridRef={gridRef}
-          gridPreview={gridPreview}
-          setGridPreview={setGridPreview}
-          clips={clips}
-          importToken={importToken}
-          isEmpty={isEmpty}
-          handleExport={handleExport}
-          sideBarEnabled={sideBarEnabled}
-          videoIsHEVC={videoIsHEVC}
-          userHasHEVC={userHasHEVC}
-          focusedClip={focusedClip}
-          setFocusedClip={setFocusedClip}
-          exportDir={exportDir}
-          onPickExportDir={onPickExportDir}
-          onExportDirChange={onExportDirChange}
-          defaultMergedName={defaultMergedName}
-          selectedClips={selectedClips}
-          setSelectedClips={setSelectedClips}
-          loading={loading}
-        />
-
-        <div className="info-bar">
-          {openedEpisodeId && importedVideoPath && (
-            <span className="info-bar-filename">
-              {fileNameFromPath(importedVideoPath)}
-            </span>
-          )}
-        </div>
+      <div className="info-bar">
+        {openedEpisodeId && importedVideoPath && (
+          <span className="info-bar-filename">
+            {fileNameFromPath(importedVideoPath)}
+          </span>
+        )}
       </div>
-    </>
+    </div>
   );
 }
