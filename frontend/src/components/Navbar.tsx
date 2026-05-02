@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import type { Page } from "./sidebar/types"
 
@@ -21,21 +21,32 @@ export default function Navbar({
     activePage,
     setActivePage,
 }: NavbarProps) {
-    // Use startDragging() instead of data-tauri-drag-region so buttons still receive clicks.
-    // Must NOT be async — startDragging() must fire synchronously during the mousedown event.
-    const handleNavDrag = (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        if (target.closest("button, a, input, select")) return;
-        appWin.startDragging().catch(() => { /* ignore */ });
-    };
+    const navbarRef = useRef<HTMLDivElement>(null);
+
+    // Attach native (non-React) mousedown listener so startDragging() fires
+    // in the real DOM event context that Tauri requires — React synthetic events
+    // are too late for the OS to register the drag initiation.
+    useEffect(() => {
+        const el = navbarRef.current;
+        if (!el) return;
+
+        const onMouseDown = (e: MouseEvent) => {
+            const target = e.target as Element;
+            if (target.closest("button, a, input, select")) return;
+            appWin.startDragging().catch(() => { /* ignore */ });
+        };
+
+        el.addEventListener("mousedown", onMouseDown);
+        return () => el.removeEventListener("mousedown", onMouseDown);
+    }, []);
 
     return (
-        <div className="navbar" onMouseDown={handleNavDrag}>
+        <div className="navbar" ref={navbarRef}>
             {/* Left: sidebar toggle + wordmark */}
             <div className="nav-left">
                 <button
                     className="sidebar-toggle"
-                    onMouseDown={(e) => { e.stopPropagation(); setSideBarEnabled(prev => !prev); }}
+                    onClick={() => setSideBarEnabled(prev => !prev)}
                     title={sideBarEnabled ? "Hide panel" : "Show panel"}
                     aria-label="Toggle sidebar"
                 >
@@ -54,13 +65,13 @@ export default function Navbar({
             <nav className="nav-tabs">
                 <button
                     className={`nav-tab${activePage === "clipping" ? " active" : ""}`}
-                    onMouseDown={(e) => { e.stopPropagation(); setActivePage("clipping"); }}
+                    onClick={() => setActivePage("clipping")}
                 >
                     CLIPPING
                 </button>
                 <button
                     className={`nav-tab${activePage === "editor" ? " active" : ""}`}
-                    onMouseDown={(e) => { e.stopPropagation(); setActivePage("editor"); }}
+                    onClick={() => setActivePage("editor")}
                 >
                     EDITOR
                 </button>
@@ -70,7 +81,7 @@ export default function Navbar({
             <div className="nav-right">
                 <button
                     className="theme-toggle"
-                    onMouseDown={(e) => { e.stopPropagation(); onThemeToggle(); }}
+                    onClick={onThemeToggle}
                     title={isDarkMode ? "Switch to light" : "Switch to dark"}
                     aria-label="Toggle theme"
                 >
@@ -80,11 +91,11 @@ export default function Navbar({
                     }
                 </button>
 
-                {/* Window controls — stopPropagation on mousedown so navbar drag handler never fires */}
+                {/* Window controls */}
                 <div className="win-controls">
                     <button
                         className="win-btn win-min"
-                        onMouseDown={(e) => { e.stopPropagation(); appWin.minimize(); }}
+                        onClick={() => appWin.minimize()}
                         title="Minimize"
                         aria-label="Minimize"
                     >
@@ -94,7 +105,7 @@ export default function Navbar({
                     </button>
                     <button
                         className="win-btn win-max"
-                        onMouseDown={(e) => { e.stopPropagation(); appWin.toggleMaximize(); }}
+                        onClick={() => appWin.toggleMaximize()}
                         title="Maximize"
                         aria-label="Maximize"
                     >
@@ -104,7 +115,7 @@ export default function Navbar({
                     </button>
                     <button
                         className="win-btn win-close"
-                        onMouseDown={(e) => { e.stopPropagation(); appWin.close(); }}
+                        onClick={() => appWin.close()}
                         title="Close"
                         aria-label="Close"
                     >
