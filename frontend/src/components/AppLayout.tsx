@@ -33,6 +33,11 @@ export default function AppLayout({
           <h1>Drag file(s) here.</h1>
         </div>
       )}
+
+      {/* Full-width floating navbar pill */}
+      <Navbar {...navbarProps} />
+
+      {/* Body: sidebar + content */}
       <div
         className="window-wrapper"
         ref={windowWrapperRef}
@@ -41,24 +46,23 @@ export default function AppLayout({
           ["--amverge-divider-offset" as any]: `${dividerProps.dividerOffsetPx}px`,
         }}
       >
-        {sidebarProps.sideBarEnabled && (
-          <>
-            <Sidebar {...sidebarProps} />
-            <div
-              className="divider sidebar-splitter"
-              onPointerDown={dividerProps.onPointerDown}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize sidebar"
-              tabIndex={-1}
-            >
-              <span className="subdivider" />
-              <span className="subdivider" />
-            </div>
-          </>
-        )}
+        {/* Sidebar — always in DOM; CSS class drives collapse animation */}
+        <Sidebar {...sidebarProps} />
+
+        {/* Resize handle — invisible gap; hidden by CSS when sidebar collapsed */}
+        <div
+          className="divider sidebar-splitter"
+          onPointerDown={dividerProps.onPointerDown}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          tabIndex={-1}
+        >
+          <span className="subdivider" />
+          <span className="subdivider" />
+        </div>
+
         <div className="content-wrapper">
-          <Navbar {...navbarProps} />
           {children}
         </div>
       </div>

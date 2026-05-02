@@ -437,10 +437,10 @@ function App() {
       navbarProps={{
         setSideBarEnabled,
         sideBarEnabled,
-        userHasHEVC,
-        videoIsHEVC: state.videoIsHEVC,
-        isDarkMode, // [AMVerge Plus]
+        isDarkMode,        // [AMVerge Plus]
         onThemeToggle: handleThemeToggle, // [AMVerge Plus]
+        activePage,        // [AMVerge Plus]
+        setActivePage,     // [AMVerge Plus]
       }}
       dividerProps={{
         onPointerDown: startSidebarResize,

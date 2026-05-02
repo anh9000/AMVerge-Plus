@@ -1,7 +1,7 @@
 /* ============================================================
-   AMVerge Plus — Design System v2
-   Phase 1: Greyscale skeleton (no color, no gradients)
-   Accent / glow / color unlocked in phase 2 by swapping --accent
+   AMVerge Plus — Glass Morphism Design System
+   Floating panels · backdrop-filter blur · Tauri transparent window
+   Phase 1: greyscale accent (swap --accent var to unlock color)
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
@@ -10,52 +10,63 @@
    DESIGN TOKENS — dark mode (default)
    ============================================================ */
 :root {
-  /* Surfaces */
-  --bg:              #080808;
-  --bg-panel:        rgba(14, 14, 14, 0.88);
-  --bg-panel-solid:  #111111;
-  --bg-hover:        rgba(255, 255, 255, 0.04);
-  --bg-active:       rgba(255, 255, 255, 0.07);
-  --bg-input:        rgba(255, 255, 255, 0.05);
-  --bg-card:         #111111;
-  --bg-card-hover:   #181818;
+  /* Base surfaces */
+  --bg:              #09090f;
+  --bg-panel:        rgba(15, 13, 24, 0.82);
+  --bg-panel-solid:  #12111f;
+  --bg-hover:        rgba(255, 255, 255, 0.05);
+  --bg-active:       rgba(255, 255, 255, 0.09);
+  --bg-input:        rgba(255, 255, 255, 0.06);
+  --bg-card:         rgba(18, 16, 30, 0.90);
+  --bg-card-hover:   rgba(26, 24, 42, 0.92);
   --bg-overlay:      rgba(0, 0, 0, 0.75);
 
   /* Borders */
   --border:          rgba(255, 255, 255, 0.07);
-  --border-hover:    rgba(255, 255, 255, 0.16);
-  --border-focus:    rgba(255, 255, 255, 0.36);
-  --border-select:   rgba(255, 255, 255, 0.85);
+  --border-hover:    rgba(255, 255, 255, 0.14);
+  --border-focus:    rgba(255, 255, 255, 0.32);
+  --border-select:   rgba(255, 255, 255, 0.80);
 
   /* Text */
-  --text-primary:   #f2f2f2;
-  --text-secondary: #7a7a7a;
-  --text-muted:     #3d3d3d;
+  --text-primary:   #ecedf5;
+  --text-secondary: #6d6d92;
+  --text-muted:     #343450;
   --text-on-accent: #000000;
 
-  /* Accent — phase 1 placeholder (white). Swap ONE var to unlock full color scheme */
+  /* Accent — phase 1 placeholder. Swap ONE var to unlock full color scheme */
   --accent:         #ffffff;
-  --accent-dim:     rgba(255, 255, 255, 0.12);
-  --accent-glow:    rgba(255, 255, 255, 0.08);
+  --accent-dim:     rgba(255, 255, 255, 0.10);
+  --accent-glow:    rgba(255, 255, 255, 0.06);
 
-  /* Glass */
-  --glass-bg:     rgba(12, 12, 12, 0.82);
-  --glass-blur:   blur(28px);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.07);
+  /* Glass panel system */
+  --glass-bg:     rgba(14, 12, 22, 0.82);
+  --glass-blur:   blur(36px) saturate(1.6);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 
-  /* Dimensions */
-  --navbar-h:     48px;
-  --sidebar-w:    var(--amverge-sidebar-width, 280px);
-  --radius-xl:    14px;
-  --radius-lg:    10px;
-  --radius-md:    7px;
-  --radius-sm:    5px;
-  --gap:          8px;
+  /* Background gradient blob colours (morphed per theme) */
+  --blob-1: rgba(55, 18, 95, 0.52);
+  --blob-2: rgba(16, 22, 88, 0.44);
+  --blob-3: rgba(38, 8, 68, 0.30);
+
+  /* Focused clip glow */
+  --glow-focus-a: rgba(110, 90, 200, 0.38);
+  --glow-focus-b: rgba(130, 110, 220, 0.55);
+
+  /* Layout */
+  --navbar-h:  44px;
+  --sidebar-w: var(--amverge-sidebar-width, 268px);
+  --radius-xl: 14px;
+  --radius-lg: 10px;
+  --radius-md: 7px;
+  --radius-sm: 5px;
+  --gap:       6px;
 
   /* Motion */
-  --t-fast: 100ms ease;
-  --t-base: 180ms ease;
-  --t-slow: 320ms ease;
+  --t-fast: 90ms ease;
+  --t-base: 160ms ease;
+  --t-slow: 300ms ease;
 
   /* Typography */
   --font-pixel: 'Pixelify Sans', 'Courier New', monospace;
@@ -63,36 +74,45 @@
 }
 
 /* ============================================================
-   LIGHT MODE (After Effects / Photoshop appearance toggle)
+   LIGHT MODE
    ============================================================ */
 [data-theme="light"] {
-  --bg:              #d6d6d6;
-  --bg-panel:        rgba(210, 210, 210, 0.90);
-  --bg-panel-solid:  #c8c8c8;
+  --bg:              #f0f0f8;
+  --bg-panel:        rgba(255, 255, 255, 0.86);
+  --bg-panel-solid:  #ffffff;
   --bg-hover:        rgba(0, 0, 0, 0.04);
-  --bg-active:       rgba(0, 0, 0, 0.08);
-  --bg-input:        rgba(0, 0, 0, 0.06);
-  --bg-card:         #c0c0c0;
-  --bg-card-hover:   #b8b8b8;
-  --bg-overlay:      rgba(180, 180, 180, 0.75);
+  --bg-active:       rgba(0, 0, 0, 0.07);
+  --bg-input:        rgba(0, 0, 0, 0.045);
+  --bg-card:         rgba(255, 255, 255, 0.92);
+  --bg-card-hover:   rgba(246, 246, 255, 0.98);
+  --bg-overlay:      rgba(210, 210, 230, 0.72);
 
-  --border:          rgba(0, 0, 0, 0.10);
-  --border-hover:    rgba(0, 0, 0, 0.22);
-  --border-focus:    rgba(0, 0, 0, 0.45);
-  --border-select:   rgba(0, 0, 0, 0.85);
+  --border:          rgba(0, 0, 0, 0.08);
+  --border-hover:    rgba(0, 0, 0, 0.16);
+  --border-focus:    rgba(0, 0, 0, 0.36);
+  --border-select:   rgba(0, 0, 0, 0.80);
 
-  --text-primary:   #111111;
-  --text-secondary: #555555;
-  --text-muted:     #999999;
+  --text-primary:   #111120;
+  --text-secondary: #52526e;
+  --text-muted:     #9898b0;
   --text-on-accent: #ffffff;
 
-  --accent:         #111111;
-  --accent-dim:     rgba(0, 0, 0, 0.10);
-  --accent-glow:    rgba(0, 0, 0, 0.06);
+  --accent:         #111120;
+  --accent-dim:     rgba(0, 0, 0, 0.08);
+  --accent-glow:    rgba(0, 0, 0, 0.04);
 
-  --glass-bg:     rgba(196, 196, 196, 0.85);
-  --glass-blur:   blur(28px);
-  --glass-border: 1px solid rgba(0, 0, 0, 0.09);
+  --glass-bg:     rgba(255, 255, 255, 0.78);
+  --glass-blur:   blur(36px) saturate(2.0);
+  --glass-border: 1px solid rgba(0, 0, 0, 0.07);
+  --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+
+  --blob-1: rgba(185, 175, 252, 0.30);
+  --blob-2: rgba(172, 210, 255, 0.26);
+  --blob-3: rgba(220, 180, 255, 0.20);
+
+  --glow-focus-a: rgba(100, 80, 190, 0.28);
+  --glow-focus-b: rgba(120, 100, 210, 0.42);
 }
 
 /* ============================================================
@@ -108,7 +128,7 @@ html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background: transparent; /* Tauri decorations:false — transparent webview */
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 13px;
@@ -138,15 +158,16 @@ input, textarea, select {
 
 a { color: inherit; text-decoration: none; }
 
-/* Thin scrollbar everywhere */
+/* Thin scrollbar */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(128, 128, 128, 0.2); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.4); }
+::-webkit-scrollbar-thumb  { background: rgba(128, 128, 128, 0.18); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.36); }
 
 /* ============================================================
    ROOT SHELL
-   app-root → navbar (full width) + window-wrapper (sidebar + content)
+   Transparent so Tauri rounded corners work on Win10.
+   app-root IS the visual window — it has the background + border-radius.
    ============================================================ */
 .app-root {
   position: relative;
@@ -155,111 +176,177 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  border-radius: 14px;        /* window rounded corners (decorations:false) */
+  padding: var(--gap);
+  gap: var(--gap);
+  background:
+    radial-gradient(ellipse 62% 50% at 5% 95%, var(--blob-1) 0%, transparent 68%),
+    radial-gradient(ellipse 55% 46% at 95% 5%, var(--blob-2) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 38% at 50% 18%, var(--blob-3) 0%, transparent 75%),
+    var(--bg);
 }
 
 /* ============================================================
-   NAVBAR — full-width top toolbar
+   NAVBAR — floating glass pill at top
    ============================================================ */
 .navbar {
   flex-shrink: 0;
-  width: 100%;
   height: var(--navbar-h);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 8px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-bottom: var(--glass-border);
+  border: var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
   z-index: 60;
-  gap: 12px;
-}
-
-/* Left section: toggle + wordmark */
-.left-nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-/* Sidebar toggle chevron */
-.left-nav > svg {
-  flex-shrink: 0;
-  opacity: 0.35;
-  transition: opacity var(--t-base), transform var(--t-base);
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.left-nav > svg:hover { opacity: 0.8; }
-
-/* Wordmark */
-.left-nav h1 {
-  font-family: var(--font-pixel);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
+  gap: 6px;
   user-select: none;
 }
 
-.left-nav h1 span { color: var(--accent); }
-
-/* Codec status group — tucked to the right */
-.hevc-check {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-left: auto;
-}
-
-.hevc-row {
+/* Left: toggle + wordmark */
+.nav-left {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-}
-
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.status-dot.ok      { background: var(--text-secondary); }
-.status-dot.bad     { background: var(--text-muted); }
-.status-dot.unknown { background: var(--border-hover); }
-
-/* Theme toggle button — added in App.tsx */
-.theme-toggle-btn {
-  flex-shrink: 0;
+.sidebar-toggle {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
-  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  color: var(--text-secondary);
+  opacity: 0.65;
+  transition: opacity var(--t-fast), background var(--t-fast);
+  flex-shrink: 0;
 }
 
-.theme-toggle-btn:hover {
+.sidebar-toggle:hover {
+  opacity: 1;
   background: var(--bg-hover);
-  border-color: var(--border-hover);
+}
+
+.wordmark {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.wordmark-accent { color: var(--accent); }
+
+/* Center: navigation pill tabs */
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.20);
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  margin: 0 auto;  /* push to horizontal center */
+}
+
+[data-theme="light"] .nav-tabs {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.nav-tab {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  transition: background var(--t-fast), color var(--t-fast);
+  white-space: nowrap;
+}
+
+.nav-tab:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .nav-tab.active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Right: theme + window controls */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;  /* push to far right */
+}
+
+.theme-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.65;
+  transition: opacity var(--t-fast), background var(--t-fast);
+}
+
+.theme-toggle:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+/* Window controls — min / max / close */
+.win-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.win-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.45;
+  transition: opacity var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+
+.win-btn:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+.win-close:hover {
+  background: rgba(210, 48, 48, 0.24);
+  color: #ff6b6b;
+  opacity: 1;
 }
 
 /* ============================================================
    WINDOW WRAPPER — sidebar + content row
+   Dividers provide the inter-panel gaps; wrapper itself has no gap.
    ============================================================ */
 .window-wrapper {
   display: flex;
@@ -267,10 +354,11 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  gap: 0;
 }
 
 /* ============================================================
-   SIDEBAR
+   SIDEBAR — floating glass panel with smooth CSS collapse
    ============================================================ */
 .sidebar-container {
   flex-shrink: 0;
@@ -281,82 +369,71 @@ a { color: inherit; text-decoration: none; }
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-right: var(--glass-border);
+  border: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
   overflow: hidden;
   z-index: 40;
+  /* Smooth collapse animation */
+  transition:
+    width 0.30s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.30s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    border-width 0.22s ease;
 }
 
-/* Sidebar nav buttons (Home / Menu) */
-.sidebar-button {
-  flex-shrink: 0;
+/* Collapsed state — width → 0, fades out */
+.sidebar-container.sidebar-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border-width: 0;
+  pointer-events: none;
 }
 
-.sidebar-button button {
-  display: block;
-  width: 100%;
-  padding: 9px 14px;
-  font-family: var(--font-pixel);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  text-align: left;
-  border-bottom: var(--glass-border);
-  transition: background var(--t-fast), color var(--t-fast);
-}
-
-.sidebar-button button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.sidebar-button button:disabled {
-  color: var(--text-primary);
-  background: var(--bg-active);
-  cursor: default;
+/* Collapse the resize divider too when sidebar is hidden */
+.sidebar-container.sidebar-collapsed + .divider.sidebar-splitter {
+  width: 0 !important;
+  pointer-events: none;
+  transition: width 0.30s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================================
-   SIDEBAR SPLITTER DIVIDER
+   SIDEBAR SPLITTER DIVIDER (acts as the visual gap between panels)
    ============================================================ */
 .divider.sidebar-splitter {
   flex-shrink: 0;
-  width: 5px;
+  width: var(--gap);
   height: 100%;
+  cursor: col-resize;
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  cursor: col-resize;
-  background: transparent;
-  transition: background var(--t-base);
+  transition: background var(--t-base), width 0.30s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 45;
   position: relative;
 }
 
+/* Extended hit area */
 .divider.sidebar-splitter::before {
   content: '';
   position: absolute;
   inset: 0;
-  left: -2px;
-  right: -2px;
-  background: transparent;
+  left: -3px;
+  right: -3px;
 }
 
 .divider.sidebar-splitter:hover {
-  background: rgba(128, 128, 128, 0.08);
+  background: rgba(128, 128, 128, 0.05);
 }
 
-.divider.sidebar-splitter .subdivider {
-  width: 1.5px;
-  height: 18px;
-  background: rgba(128, 128, 128, 0.2);
-  border-radius: 1px;
-  pointer-events: none;
-}
+/* Subdivider pips hidden in floating layout */
+.divider.sidebar-splitter .subdivider { display: none; }
 
 /* ============================================================
-   CONTENT WRAPPER (right of sidebar)
+   CONTENT WRAPPER + MAIN CONTENT
    ============================================================ */
 .content-wrapper {
   display: flex;
@@ -367,17 +444,20 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
-/* main-content hosts HomePage or Menu */
+/* Hosts either <HomePage> or <Menu>.
+   gap: var(--gap) creates the visual space between the clips-import
+   toolbar and the main-layout-wrapper — background gradient shows through. */
 .main-content {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: var(--gap);
 }
 
 /* ============================================================
-   EPISODE PANEL (sidebar file tree)
+   EPISODE PANEL (tree view inside sidebar)
    ============================================================ */
 .eps-container {
   flex: 1;
@@ -401,7 +481,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 12px 8px;
   border-bottom: var(--glass-border);
   gap: 6px;
 }
@@ -531,7 +611,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ============================================================
-   MAIN LAYOUT (home page split)
+   MAIN LAYOUT (home page — clips + preview horizontal split)
    ============================================================ */
 .main-layout-wrapper {
   flex: 1;
@@ -541,81 +621,107 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
+/* The horizontal split: left-pane (clips) + divider + right-pane (preview) */
 .split-layout {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  gap: 0; /* inner divider is the gap */
 }
 
+/* Left pane — clips grid glass panel */
 .left-pane {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
 }
 
+/* Right pane — preview glass panel */
 .right-pane {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
 }
 
-/* Inner split divider (left/right panes) */
+/* Inner split divider (left↔right resize handle = visual gap) */
 .split-layout > .divider {
   flex-shrink: 0;
-  width: 5px;
+  width: var(--gap);
   cursor: col-resize;
   background: transparent;
-  transition: background var(--t-base);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  transition: background var(--t-base);
+  position: relative;
+}
+
+.split-layout > .divider::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: -3px;
+  right: -3px;
 }
 
 .split-layout > .divider:hover {
-  background: rgba(128, 128, 128, 0.08);
+  background: rgba(128, 128, 128, 0.05);
 }
 
-.split-layout > .divider .subdivider {
-  width: 1.5px;
-  height: 18px;
-  background: rgba(128, 128, 128, 0.18);
-  border-radius: 1px;
-  pointer-events: none;
-}
+/* Pips hidden in floating layout */
+.split-layout > .divider .subdivider { display: none; }
 
 /* ============================================================
-   IMPORT BUTTONS BAR
+   IMPORT TOOLBAR (clips-import) — glass pill row at top
    ============================================================ */
 .clips-import {
   flex-shrink: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  padding: 9px 12px;
+  padding: 6px 10px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-bottom: var(--glass-border);
+  border: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-sheen), var(--glass-shadow);
 }
+
+/* Rename panel expands as a full-width row beneath the toolbar */
+.clips-import > .rename-panel { flex-basis: 100%; }
 
 .import-buttons-container {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-/* All toolbar buttons share the same pill style */
+/* All toolbar pill buttons */
 .import-buttons-container button,
 .rename-trigger-btn {
-  height: 30px;
-  padding: 0 12px;
+  height: 28px;
+  padding: 0 11px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-input);
@@ -635,16 +741,19 @@ a { color: inherit; text-decoration: none; }
 }
 
 .import-buttons-container button:disabled {
-  opacity: 0.35;
+  opacity: 0.28;
   cursor: not-allowed;
 }
 
-/* Checkbox + zoom row */
+/* Import button — small pill, NOT full-width */
+#file-button { /* inherits pill style above, no width override */ }
+
+/* Checkboxes + zoom — aligned to the right */
 .grid-checkboxes {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  margin-left: auto;
 }
 
 .selectable-checkboxes {
@@ -718,8 +827,8 @@ a { color: inherit; text-decoration: none; }
 .zoomWrapper form { display: flex; gap: 4px; }
 
 .zoomWrapper button {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-input);
@@ -749,9 +858,11 @@ a { color: inherit; text-decoration: none; }
 
 #empty-grid {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
+  gap: 10px;
   font-family: var(--font-pixel);
   font-size: 12px;
   color: var(--text-muted);
@@ -764,7 +875,7 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
 }
 
-/* Individual clip card — bento style */
+/* Clip card */
 .clip-wrapper {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -786,13 +897,31 @@ a { color: inherit; text-decoration: none; }
   z-index: 2;
 }
 
-/* Focused (single-click selected) */
+/* Focused clip — soft indigo pulse glow */
 .clip-wrapper.focused {
-  border-color: var(--border-select);
-  box-shadow: 0 0 0 1px var(--border-focus), 0 8px 28px rgba(0, 0, 0, 0.5);
+  border-color: rgba(110, 90, 200, 0.50);
+  box-shadow:
+    0 0 0 1px rgba(100, 80, 190, 0.32),
+    0 0 16px rgba(90, 70, 180, 0.28),
+    0 8px 28px rgba(0, 0, 0, 0.5);
+  animation: clip-focus-pulse 2.8s ease-in-out infinite;
 }
 
-/* The actual image / video element inside */
+@keyframes clip-focus-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px var(--glow-focus-a),
+      0 0 16px rgba(90, 70, 180, 0.26),
+      0 8px 28px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1.5px var(--glow-focus-b),
+      0 0 26px rgba(120, 100, 215, 0.40),
+      0 8px 28px rgba(0, 0, 0, 0.5);
+  }
+}
+
 .clip {
   width: 100%;
   height: 100%;
@@ -807,7 +936,7 @@ video.clip {
   border-radius: var(--radius-lg);
 }
 
-/* Skeleton shimmer for loading state */
+/* Skeleton shimmer */
 .clip-skeleton {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -815,7 +944,7 @@ video.clip {
   background: linear-gradient(
     90deg,
     var(--bg-card) 25%,
-    rgba(128, 128, 128, 0.06) 50%,
+    rgba(128, 128, 128, 0.05) 50%,
     var(--bg-card) 75%
   );
   background-size: 200% 100%;
@@ -836,7 +965,7 @@ video.clip {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  border: 1.5px solid rgba(128, 128, 128, 0.3);
+  border: 1.5px solid rgba(128, 128, 128, 0.25);
   background: transparent;
   z-index: 3;
   transition: background var(--t-fast), border-color var(--t-fast);
@@ -849,16 +978,16 @@ video.clip {
 }
 
 /* ============================================================
-   INFO BAR (bottom status strip)
+   INFO BAR (bottom filename strip)
    ============================================================ */
 .info-bar {
   flex-shrink: 0;
-  height: 24px;
+  height: 22px;
   display: flex;
   align-items: center;
   padding: 0 12px;
   border-top: var(--glass-border);
-  background: var(--glass-bg);
+  background: transparent;
 }
 
 .info-bar-filename {
@@ -871,7 +1000,7 @@ video.clip {
 }
 
 /* ============================================================
-   PREVIEW PANEL
+   PREVIEW PANEL (inside .right-pane — which provides glass bg)
    ============================================================ */
 .preview-container {
   flex: 1;
@@ -879,10 +1008,7 @@ video.clip {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-left: var(--glass-border);
+  background: transparent; /* right-pane provides the glass */
 }
 
 .preview-window {
@@ -892,11 +1018,12 @@ video.clip {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #000000;
+  background: rgba(0, 0, 0, 0.32);
+  border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
 }
 
 [data-theme="light"] .preview-window {
-  background: #1a1a1a;
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .preview-window p {
@@ -919,7 +1046,7 @@ video.clip {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
+  padding: 10px 12px;
   border-top: var(--glass-border);
 }
 
@@ -931,7 +1058,7 @@ video.clip {
 
 .export-dir-input {
   flex: 1;
-  height: 30px;
+  height: 28px;
   padding: 0 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -945,8 +1072,8 @@ video.clip {
 .export-dir-input::placeholder { color: var(--text-muted); }
 
 .export-dir-browse {
-  height: 30px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 9px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-input);
@@ -954,6 +1081,8 @@ video.clip {
   font-size: 11px;
   transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
 
 .export-dir-browse:hover {
@@ -962,9 +1091,9 @@ video.clip {
   color: var(--text-primary);
 }
 
-/* Generic action button (.buttons used in PreviewContainer) */
+/* Generic action button (.buttons) */
 .buttons {
-  height: 30px;
+  height: 28px;
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-hover);
@@ -985,8 +1114,6 @@ video.clip {
   background: var(--bg-hover);
   border-color: var(--border-focus);
 }
-
-#file-button { width: 100%; }
 
 /* ============================================================
    DETECTION SETTINGS PANEL
@@ -1023,7 +1150,7 @@ video.clip {
 }
 
 .ds-toggle-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.30;
   cursor: not-allowed;
 }
 
@@ -1050,9 +1177,7 @@ video.clip {
   gap: 10px;
 }
 
-.ds-row-toggle {
-  align-items: center;
-}
+.ds-row-toggle { align-items: center; }
 
 .ds-label {
   display: flex;
@@ -1106,9 +1231,9 @@ video.clip {
 }
 
 .ds-select:focus { border-color: var(--border-focus); }
-.ds-select option { background: #1a1a1a; }
+.ds-select option { background: #12111f; }
 
-/* Toggle pill (snap to keyframes on/off) */
+/* Toggle pill */
 .ds-toggle {
   flex-shrink: 0;
   height: 22px;
@@ -1128,12 +1253,12 @@ video.clip {
   color: var(--text-primary);
 }
 
-/* Range input global style */
+/* Range input */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 3px;
-  background: rgba(128, 128, 128, 0.2);
+  background: rgba(128, 128, 128, 0.20);
   border-radius: 99px;
   border: none !important;
   padding: 0 !important;
@@ -1166,7 +1291,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
 }
 
 .rename-panel input,
@@ -1184,7 +1308,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
 
 .rename-panel input:focus,
 .rename-panel select:focus { border-color: var(--border-focus); }
-.rename-panel select option { background: #1a1a1a; }
+.rename-panel select option { background: #12111f; }
 
 /* ============================================================
    LOADING OVERLAY
@@ -1198,24 +1322,22 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
   align-items: center;
   justify-content: center;
   gap: 20px;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 14px;
 }
 
-/* Spinner */
 .spinner {
   width: 32px;
   height: 32px;
-  border: 2px solid rgba(128, 128, 128, 0.2);
+  border: 2px solid rgba(128, 128, 128, 0.18);
   border-top-color: var(--text-secondary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .loading-text {
   display: flex;
@@ -1231,7 +1353,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
 .progress-bar {
   width: 280px;
   height: 2px;
-  background: rgba(128, 128, 128, 0.15);
+  background: rgba(128, 128, 128, 0.14);
   border-radius: 99px;
   overflow: hidden;
 }
@@ -1278,22 +1400,23 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
    DRAG-AND-DROP OVERLAY
    ============================================================ */
 .dragging-overlay {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  inset: var(--gap);
   z-index: 300;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.70);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: calc(var(--radius-xl) - 2px);
 }
 
 .dragging-overlay::before {
   content: '';
   position: absolute;
   inset: 16px;
-  border: 1.5px dashed rgba(128, 128, 128, 0.35);
+  border: 1.5px dashed rgba(128, 128, 128, 0.32);
   border-radius: var(--radius-xl);
   pointer-events: none;
 }
@@ -1317,8 +1440,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
   align-items: center;
   justify-content: center;
   background: var(--bg-overlay);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .episode-modal {
@@ -1330,7 +1453,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.80);
 }
 
 .episode-modal-title {
@@ -1387,133 +1510,51 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
   font-weight: 600;
 }
 
-.episode-modal-btn.primary:hover {
-  opacity: 0.85;
-}
+.episode-modal-btn.primary:hover { opacity: 0.85; }
 
 /* ============================================================
    UPDATE BANNER
    ============================================================ */
 .update-banner {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: calc(var(--gap) + var(--navbar-h) + var(--gap));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: rgba(20, 20, 20, 0.96);
-  border-bottom: 1px solid var(--border-hover);
-  font-size: 11px;
-  color: var(--text-secondary);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.update-banner-text {
-  font-family: var(--font-pixel);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-}
-
-.update-banner-btn {
-  height: 22px;
-  padding: 0 12px;
-  border-radius: 99px;
-  border: 1px solid var(--border-hover);
-  background: var(--accent-dim);
-  color: var(--text-primary);
-  font-size: 10px;
-  font-family: var(--font-pixel);
-  letter-spacing: 0.03em;
-  transition: background var(--t-fast), border-color var(--t-fast);
-}
-
-.update-banner-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-focus);
-}
-
-.update-banner-dismiss {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--t-fast), color var(--t-fast);
-}
-
-.update-banner-dismiss:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.update-banner-bar {
-  width: 120px;
-  height: 2px;
-  background: rgba(128, 128, 128, 0.15);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.update-banner-fill {
-  height: 100%;
-  background: var(--text-secondary);
-  border-radius: 99px;
-  transition: width 300ms ease;
-}
-
-/* ============================================================
-   UTILITY
-   ============================================================ */
-
-/* Lock cursor during sidebar drag */
-.is-resizing-sidebar * {
-  user-select: none !important;
-  cursor: col-resize !important;
-}
-
-/* Context menus (positioned via JS) */
-.context-menu {
-  position: fixed;
-  z-index: 200;
   background: var(--bg-panel-solid);
   border: 1px solid var(--border-hover);
   border-radius: var(--radius-lg);
-  padding: 4px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-  min-width: 160px;
-}
-
-.context-menu-item {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 12px;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
 }
 
-.context-menu-item:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.update-banner a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.context-menu-item.danger:hover {
-  background: rgba(200, 60, 60, 0.12);
-  color: #e06060;
+.update-banner button {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  opacity: 0.7;
+  transition: opacity var(--t-fast);
 }
 
-.context-menu-separator {
-  height: 1px;
-  background: var(--border);
-  margin: 4px 8px;
+.update-banner button:hover { opacity: 1; }
+
+/* ============================================================
+   RESIZE CURSOR STATE
+   ============================================================ */
+body.is-resizing-sidebar,
+body.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
