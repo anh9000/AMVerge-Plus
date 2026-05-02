@@ -112,7 +112,7 @@ The reason tools like AMVtool expose this as a named feature is that a lot of us
 
 ## How clip previews work
 
-When AMVerge Plus displays your clips in the grid, it is not streaming or decoding any video. For each clip, FFmpeg extracts a single frame at a specific timestamp and saves it as a JPEG on disk. That image is then loaded into the card like any regular picture.
+When AMVerge Plus displays your clips in the grid, it is not streaming or decoding any video. For each clip, FFmpeg extracts a single frame at a specific timestamp and saves it as a JPEG in a local temp folder on your machine (on Windows this is under %LOCALAPPDATA%\AMVerge). That image is then loaded into the card like any regular picture. The thumbnails persist between sessions so the grid loads instantly on reopen without re-extracting anything. Clearing the episode panel cache removes them along with all other cached data.
 
 This means the clip grid is essentially an image gallery. No video is being processed or decoded to render the thumbnails, which is why the grid stays fast and responsive even with hundreds of clips loaded. The app only renders what is visible on screen at any given time, so memory usage stays low regardless of library size.
 
