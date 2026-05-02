@@ -11,7 +11,15 @@ from typing import Any
 import av
 from PIL import Image
 
-from utils.video_utils import generate_keyframes, emit_progress, get_binary, merge_short_scenes
+from utils.video_utils import (
+    generate_keyframes,
+    emit_progress,
+    get_binary,
+    merge_short_scenes,
+    snap_to_keyframes,
+    get_audio_info,
+    audio_needs_transcode,
+)
 
 # Running commands like ffmpeg can open a command window on Windows.
 # This prevents that when the backend is launched from the app.
@@ -25,29 +33,37 @@ if IS_EXECUTABLE:
 else:
     BASE_DIR = os.path.dirname(__file__)
 
-FFMPEG = get_binary("ffmpeg.exe")
+FFMPEG = get_binary("ffmpeg")
+FFPROBE = get_binary("ffprobe")
 
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
 
 def get_log_dir() -> str:
-    # In installed builds, the sidecar exe often lives under a read-only
-    # install/resources directory. Always log to a user-writable location.
-    base = (
-        os.getenv("LOCALAPPDATA")
-        or os.getenv("APPDATA")
-        or tempfile.gettempdir()
-    )
+    """Return a writable log directory for the current platform."""
+    if sys.platform == "win32":
+        base = (
+            os.getenv("LOCALAPPDATA")
+            or os.getenv("APPDATA")
+            or tempfile.gettempdir()
+        )
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        # Linux / other Unix — honour XDG spec.
+        base = os.getenv("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
 
     return os.path.join(base, "AMVerge")
 
 
 def ensure_log_dir() -> str:
     log_dir = get_log_dir()
-
     try:
         os.makedirs(log_dir, exist_ok=True)
         return log_dir
     except Exception:
-        # Last-ditch fallback.
         return tempfile.gettempdir()
 
 
@@ -60,17 +76,22 @@ def log(message: str) -> None:
         with open(DEBUG_LOG, "a", encoding="utf-8") as file:
             file.write(message + "\n")
     except Exception:
-        # Never crash the backend due to logging.
         pass
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def format_timestamp(seconds: float) -> str:
     # Keep 6-decimal precision, but trim redundant trailing zeros.
-    # This helps avoid Windows command-line length issues when passing
-    # many cut points to ffmpeg through -segment_times.
     value = f"{float(seconds):.6f}"
     return value.rstrip("0").rstrip(".")
 
+
+# ---------------------------------------------------------------------------
+# Thumbnails
+# ---------------------------------------------------------------------------
 
 def make_thumbnail(clip_path: str, thumb_path: str) -> None:
     thumb_width = 360
@@ -83,8 +104,6 @@ def make_thumbnail(clip_path: str, thumb_path: str) -> None:
                 return
 
             stream = container.streams.video[0]
-
-            # Decode only keyframes, skip all others.
             stream.codec_context.skip_frame = "NONKEY"
 
             for frame in container.decode(stream):
@@ -112,7 +131,6 @@ def generate_thumbnails(output_dir: str, scenes: list[dict[str, Any]], file_name
     if total == 0:
         return
 
-    # Avoid spamming progress messages for large imports.
     progress_step = max(1, total // 25)
     completed = 0
 
@@ -140,28 +158,55 @@ def generate_thumbnails(output_dir: str, scenes: list[dict[str, Any]], file_name
             try:
                 future.result()
             except Exception as error:
-                # build_thumbnail already handles most failures, but this keeps
-                # unexpected thread errors from crashing the whole import.
                 log(f"Thumbnail worker failed: {error}")
 
             if completed % progress_step == 0 or completed == total:
                 emit_progress(90, f"Generating thumbnails... {completed}/{total}")
 
 
-def run_ffmpeg_segment(video_path: str, output_pattern: str, cut_points: list[float]) -> None:
+# ---------------------------------------------------------------------------
+# FFmpeg segmenting
+# ---------------------------------------------------------------------------
+
+def run_ffmpeg_segment(
+    video_path: str,
+    output_pattern: str,
+    cut_points: list[float],
+    audio_streams: list[dict] | None = None,
+) -> None:
+    """Segment the video at cut_points using stream copy.
+
+    Probes audio codecs and transcodes to AAC 192k if the source codec is
+    incompatible with MP4 (FLAC, DTS, TrueHD, etc.).  Video is always
+    stream-copied — no re-encoding.
+    """
+    needs_transcode = audio_needs_transcode(audio_streams or [])
+
     cmd = [
         FFMPEG,
         "-y",
-        "-i",
-        video_path,
-        "-c",
-        "copy",
-        "-f",
-        "segment",
-        "-segment_times",
-        ",".join(format_timestamp(point) for point in cut_points),
-        "-reset_timestamps",
-        "1",
+        "-i", video_path,
+        # Explicit stream mapping — always take the first video track and
+        # ALL audio tracks so dual-audio MKVs are preserved.
+        "-map", "0:v:0",
+    ]
+
+    if audio_streams:
+        cmd += ["-map", "0:a"]
+
+    cmd += ["-c:v", "copy"]
+
+    if audio_streams:
+        if needs_transcode:
+            log(f"Audio transcode required: incompatible codec detected → AAC 192k")
+            cmd += ["-c:a", "aac", "-b:a", "192k"]
+        else:
+            cmd += ["-c:a", "copy"]
+
+    cmd += [
+        "-f", "segment",
+        "-segment_times", ",".join(format_timestamp(point) for point in cut_points),
+        "-reset_timestamps", "1",
         output_pattern,
     ]
 
@@ -176,7 +221,6 @@ def run_ffmpeg_segment(video_path: str, output_pattern: str, cut_points: list[fl
     log(result.stderr)
 
     if result.returncode != 0:
-        # Keep the error readable. ffmpeg output can be extremely long.
         tail = result.stderr[-2000:] if result.stderr else "No stderr output."
         raise RuntimeError(f"ffmpeg failed with code {result.returncode}: {tail}")
 
@@ -214,14 +258,15 @@ def run_split_pipeline(
     video_path: str,
     output_dir: str,
     cut_points: list[float],
+    audio_streams: list[dict] | None = None,
 ) -> list[dict[str, Any]]:
-    """Segment video at cut_points then generate thumbnails. Shared by both detection modes."""
+    """Segment video at cut_points then generate thumbnails. Shared by all modes."""
     total_start = time.perf_counter()
     file_name = os.path.splitext(os.path.basename(video_path))[0]
 
     emit_progress(50, f"Cutting {len(cut_points)} scenes...")
     output_pattern = os.path.join(output_dir, f"{file_name}_%04d.mp4")
-    run_ffmpeg_segment(video_path, output_pattern, cut_points)
+    run_ffmpeg_segment(video_path, output_pattern, cut_points, audio_streams)
 
     emit_progress(75, "Building scenes...")
     final_scenes = collect_scenes(
@@ -247,11 +292,17 @@ def run_split_pipeline(
     return final_scenes
 
 
+# ---------------------------------------------------------------------------
+# Detection modes
+# ---------------------------------------------------------------------------
+
 def trim_scenes_at_keyframes(
     video_path: str,
     output_dir: str,
     min_duration: float = 1.5,
+    audio_streams: list[dict] | None = None,
 ) -> list[dict[str, Any]]:
+    """Fast mode — cut only at existing I-frames."""
     os.makedirs(output_dir, exist_ok=True)
 
     total_start = time.perf_counter()
@@ -273,23 +324,27 @@ def trim_scenes_at_keyframes(
         log("No keyframes found. Returning empty scene list.")
         return []
 
-    # Skip the first keyframe, usually 0.0.
     cut_points = sorted(keyframes[1:])
-
-    # Merge cuts that would create clips shorter than min_duration.
     cut_points = merge_short_scenes([0.0] + cut_points, min_duration=min_duration)[1:]
 
     log(f"TIMING|keyframes_done|seconds={time.perf_counter() - total_start:.3f}")
 
-    return run_split_pipeline(video_path, output_dir, cut_points)
+    return run_split_pipeline(video_path, output_dir, cut_points, audio_streams)
 
 
-def detect_scenes_content_aware(
+def trim_scenes_content_aware(
     video_path: str,
+    output_dir: str,
     min_duration: float = 1.5,
     sensitivity: float = 27.0,
-) -> list[float]:
-    """Return cut-point timestamps using PySceneDetect ContentDetector."""
+    snap_keyframes_flag: bool = True,
+    audio_streams: list[dict] | None = None,
+) -> list[dict[str, Any]]:
+    """Live-action mode — PySceneDetect ContentDetector (HSV histograms)."""
+    os.makedirs(output_dir, exist_ok=True)
+
+    emit_progress(10, "Starting content analysis...")
+
     try:
         from scenedetect import open_video, SceneManager
         from scenedetect.detectors import ContentDetector
@@ -305,7 +360,6 @@ def detect_scenes_content_aware(
         log("Could not determine video FPS for content detection")
         return []
 
-    # PySceneDetect uses frames for min_scene_len, not seconds.
     min_scene_len = max(1, int(min_duration * fps))
     log(f"Content-aware: fps={fps:.2f} min_scene_len={min_scene_len} threshold={sensitivity}")
 
@@ -318,30 +372,121 @@ def detect_scenes_content_aware(
     scene_list = scene_manager.get_scene_list()
     log(f"Content-aware: {len(scene_list)} scenes detected")
 
-    # Each entry is (start_timecode, end_timecode). Skip the first scene's start (always 0.0).
-    cut_points = [start.get_seconds() for i, (start, _) in enumerate(scene_list) if i > 0]
+    cut_points = [
+        start.get_seconds()
+        for i, (start, _) in enumerate(scene_list)
+        if i > 0
+    ]
 
-    return cut_points
-
-
-def trim_scenes_content_aware(
-    video_path: str,
-    output_dir: str,
-    min_duration: float = 1.5,
-    sensitivity: float = 27.0,
-) -> list[dict[str, Any]]:
-    os.makedirs(output_dir, exist_ok=True)
-
-    emit_progress(10, "Starting content analysis...")
-
-    cut_points = detect_scenes_content_aware(video_path, min_duration, sensitivity)
+    if snap_keyframes_flag and cut_points:
+        emit_progress(45, "Snapping cuts to keyframes...")
+        keyframes = generate_keyframes(video_path=video_path)
+        cut_points = snap_to_keyframes(cut_points, keyframes)
+        log(f"After snap: {len(cut_points)} cut points")
 
     if not cut_points:
         log("No scene cuts detected — video treated as single scene")
 
-    log(f"Content-aware cuts: {len(cut_points)}")
-    return run_split_pipeline(video_path, output_dir, cut_points)
+    cut_points = merge_short_scenes([0.0] + cut_points, min_duration=min_duration)[1:]
 
+    return run_split_pipeline(video_path, output_dir, cut_points, audio_streams)
+
+
+def trim_scenes_anime(
+    video_path: str,
+    output_dir: str,
+    min_duration: float = 1.5,
+    sensitivity: float = 20.0,
+    snap_keyframes_flag: bool = True,
+    audio_streams: list[dict] | None = None,
+) -> list[dict[str, Any]]:
+    """Anime mode — dHash fast pass + Canny edge cosine verification.
+
+    Extracts keyframes first, then only scans intervals that are suspiciously
+    long (encoder likely missed a cut).  Snaps cuts to nearest keyframe by
+    default for clean stream-copy segments.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    from utils.content_algorithms import detect_anime
+
+    emit_progress(10, "Extracting keyframes...")
+    keyframes = generate_keyframes(
+        video_path=video_path,
+        progress_cb=emit_progress,
+        progress_base=10,
+        progress_range=10,
+        progress_interval_s=1.0,
+    )
+
+    log(f"Keyframes found: {len(keyframes)}")
+
+    if not keyframes:
+        log("No keyframes — falling back to keyframe mode")
+        return trim_scenes_at_keyframes(video_path, output_dir, min_duration, audio_streams)
+
+    emit_progress(20, "Running anime scene analysis...")
+    extra_cuts = detect_anime(
+        video_path=video_path,
+        keyframes=keyframes,
+        sensitivity=sensitivity,
+        progress_cb=emit_progress,
+    )
+
+    log(f"Anime detector extra cuts: {len(extra_cuts)}")
+
+    # Merge keyframe cuts + extra content-detected cuts.
+    all_cuts = sorted(set(keyframes[1:]) | set(extra_cuts))
+
+    if snap_keyframes_flag and extra_cuts:
+        emit_progress(72, "Snapping extra cuts to keyframes...")
+        all_cuts = snap_to_keyframes(all_cuts, keyframes)
+
+    all_cuts = merge_short_scenes([0.0] + all_cuts, min_duration=min_duration)[1:]
+
+    log(f"Final cut points: {len(all_cuts)}")
+
+    return run_split_pipeline(video_path, output_dir, all_cuts, audio_streams)
+
+
+def trim_scenes_music_video(
+    video_path: str,
+    output_dir: str,
+    min_duration: float = 0.5,
+    sensitivity: float = 15.0,
+    snap_keyframes_flag: bool = False,
+    audio_streams: list[dict] | None = None,
+) -> list[dict[str, Any]]:
+    """Music video mode — dHash only, fast sampled scan."""
+    os.makedirs(output_dir, exist_ok=True)
+
+    from utils.content_algorithms import detect_music_video
+
+    emit_progress(10, "Starting music video scan...")
+    cut_points = detect_music_video(
+        video_path=video_path,
+        sensitivity=sensitivity,
+        progress_cb=emit_progress,
+    )
+
+    log(f"Music video cuts: {len(cut_points)}")
+
+    if snap_keyframes_flag and cut_points:
+        emit_progress(76, "Snapping cuts to keyframes...")
+        keyframes = generate_keyframes(video_path=video_path)
+        cut_points = snap_to_keyframes(cut_points, keyframes)
+
+    if not cut_points:
+        log("No cuts detected")
+
+    cut_points = merge_short_scenes([0.0] + cut_points, min_duration=min_duration)[1:]
+
+    return run_split_pipeline(video_path, output_dir, cut_points, audio_streams)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="AMVerge Plus scene detector")
@@ -350,21 +495,40 @@ def main() -> int:
     parser.add_argument(
         "--mode",
         default="keyframe",
-        choices=["keyframe", "content"],
-        help="Detection mode: keyframe (fast) or content (PySceneDetect visual analysis)",
+        choices=["keyframe", "live-action", "anime", "music-video"],
+        help=(
+            "Detection mode: "
+            "keyframe (fast, default), "
+            "live-action (PySceneDetect HSV), "
+            "anime (dHash + Canny), "
+            "music-video (dHash fast scan)"
+        ),
     )
     parser.add_argument(
         "--min-duration",
         dest="min_duration",
         type=float,
         default=1.5,
-        help="Minimum clip duration in seconds — cuts creating shorter clips are merged (default: 1.5)",
+        help="Minimum clip duration in seconds (default: 1.5)",
     )
     parser.add_argument(
         "--sensitivity",
         type=float,
         default=27.0,
-        help="Content-aware threshold: lower = more cuts, higher = fewer cuts (default: 27.0)",
+        help="Detection threshold — lower = more cuts (default: 27.0)",
+    )
+    parser.add_argument(
+        "--snap-keyframes",
+        dest="snap_keyframes",
+        action="store_true",
+        default=True,
+        help="Snap content-detected cuts to nearest I-frame (default: on)",
+    )
+    parser.add_argument(
+        "--no-snap-keyframes",
+        dest="snap_keyframes",
+        action="store_false",
+        help="Disable keyframe snapping",
     )
 
     try:
@@ -375,19 +539,58 @@ def main() -> int:
         return 1
 
     try:
-        if args.mode == "content":
+        # Probe audio tracks once, shared by all modes.
+        emit_progress(5, "Probing audio tracks...")
+        audio_streams = get_audio_info(args.input_file)
+        log(f"Audio streams: {len(audio_streams)}")
+        for s in audio_streams:
+            log(f"  codec={s.get('codec_name')} channels={s.get('channels')} index={s.get('index')}")
+
+        mode = args.mode
+
+        if mode == "keyframe":
+            scenes = trim_scenes_at_keyframes(
+                args.input_file,
+                args.output_dir,
+                min_duration=args.min_duration,
+                audio_streams=audio_streams,
+            )
+
+        elif mode == "live-action":
             scenes = trim_scenes_content_aware(
                 args.input_file,
                 args.output_dir,
                 min_duration=args.min_duration,
                 sensitivity=args.sensitivity,
+                snap_keyframes_flag=args.snap_keyframes,
+                audio_streams=audio_streams,
             )
-        else:
-            scenes = trim_scenes_at_keyframes(
+
+        elif mode == "anime":
+            scenes = trim_scenes_anime(
                 args.input_file,
                 args.output_dir,
                 min_duration=args.min_duration,
+                sensitivity=args.sensitivity,
+                snap_keyframes_flag=args.snap_keyframes,
+                audio_streams=audio_streams,
             )
+
+        elif mode == "music-video":
+            scenes = trim_scenes_music_video(
+                args.input_file,
+                args.output_dir,
+                min_duration=args.min_duration,
+                sensitivity=args.sensitivity,
+                snap_keyframes_flag=args.snap_keyframes,
+                audio_streams=audio_streams,
+            )
+
+        else:
+            log(f"Unknown mode: {mode}")
+            print(json.dumps([]))
+            sys.stdout.flush()
+            return 1
 
         # stdout is reserved for the final JSON response.
         # Rust reads this, then React parses it.
@@ -402,7 +605,6 @@ def main() -> int:
         log(f"FATAL ERROR: {error}")
         log(traceback.format_exc())
 
-        # Always return valid JSON so Rust/React do not crash while parsing.
         print(json.dumps([]))
         print(f"debug_log_dir: {DEBUG_LOG_DIR}", file=sys.stderr)
         sys.stdout.flush()
