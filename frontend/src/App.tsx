@@ -54,6 +54,26 @@ function App() {
   const [progressMsg, setProgressMsg] = useState("Starting...");
   const [dividerOffsetPx, setDividerOffsetPx] = useState(0);
 
+  // [AMVerge Plus] Light / dark mode — persisted to localStorage
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("amverge_theme_v1");
+      if (saved === "light") return false;
+    } catch { /* ignore */ }
+    return true; // default: dark
+  });
+
+  // Sync data-theme attribute on <html> whenever mode changes — [AMVerge Plus]
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDarkMode ? "dark" : "light"
+    );
+    try {
+      localStorage.setItem("amverge_theme_v1", isDarkMode ? "dark" : "light");
+    } catch { /* ignore */ }
+  }, [isDarkMode]);
+
   // Persisted UI state
   const [sidebarWidthPx, setSidebarWidthPx] = useState<number>(() => {
     try {
@@ -202,6 +222,11 @@ function App() {
     } else {
       dispatch({ type: "setClips", value: [] });
     }
+  }
+
+  // [AMVerge Plus] Theme toggle
+  function handleThemeToggle() {
+    setIsDarkMode(prev => !prev);
   }
 
   // UI handlers
@@ -414,6 +439,8 @@ function App() {
         sideBarEnabled,
         userHasHEVC,
         videoIsHEVC: state.videoIsHEVC,
+        isDarkMode, // [AMVerge Plus]
+        onThemeToggle: handleThemeToggle, // [AMVerge Plus]
       }}
       dividerProps={{
         onPointerDown: startSidebarResize,

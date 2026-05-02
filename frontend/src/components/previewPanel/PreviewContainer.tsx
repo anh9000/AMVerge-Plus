@@ -12,7 +12,8 @@ type PreviewContainerProps = {
   handleExport: (
     selectedClips: Set<string>,
     enableMerged: boolean,
-    mergeFileName?: string
+    mergeFileName?: string,
+    remuxEnabled?: boolean // [AMVerge Plus]
   ) => Promise<void>;
   exportDir: string | null;
   onPickExportDir: () => void;
