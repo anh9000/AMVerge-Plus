@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Event, listen } from "@tauri-apps/api/event";
+import { AnimatePresence, motion } from "framer-motion";
 
 import AppLayout from "./components/AppLayout";
 import UpdateBanner from "./components/UpdateBanner";
@@ -453,41 +454,61 @@ function App() {
       }}
     >
       <div className="main-content">
-        {activePage === "clipping" ? (
-          <HomePage
-            cols={cols}
-            gridSize={gridSize}
-            snapGridBigger={snapGridBigger}
-            snapGridSmaller={snapGridSmaller}
-            setGridPreview={setGridPreview}
-            gridPreview={gridPreview}
-            selectedClips={state.selectedClips}
-            setSelectedClips={setSelectedClips}
-            loading={loading}
-            mainLayoutWrapperRef={mainLayoutWrapperRef}
-            gridRef={gridRef}
-            clips={state.clips}
-            setClips={setClips}
-            importToken={importToken}
-            isEmpty={isEmpty}
-            handleExport={handleExport}
-            sideBarEnabled={sideBarEnabled}
-            videoIsHEVC={state.videoIsHEVC}
-            userHasHEVC={userHasHEVC}
-            focusedClip={state.focusedClip}
-            setFocusedClip={setFocusedClip}
-            exportDir={exportDir}
-            onPickExportDir={handlePickExportDir}
-            onExportDirChange={(dir: string) => setExportDir(dir || null)}
-            defaultMergedName={(state.clips[0]?.originalName || "episode") + "_merged"}
-            openedEpisodeId={state.openedEpisodeId}
-            importedVideoPath={state.importedVideoPath}
-            detectionSettings={detectionSettings}
-            onDetectionSettingsChange={setDetectionSettings}
-          />
-        ) : (
-          <Menu />
-        )}
+        <AnimatePresence mode="wait">
+          {activePage === "clipping" ? (
+            <motion.div
+              key="clipping"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="page-motion"
+            >
+              <HomePage
+                cols={cols}
+                gridSize={gridSize}
+                snapGridBigger={snapGridBigger}
+                snapGridSmaller={snapGridSmaller}
+                setGridPreview={setGridPreview}
+                gridPreview={gridPreview}
+                selectedClips={state.selectedClips}
+                setSelectedClips={setSelectedClips}
+                loading={loading}
+                mainLayoutWrapperRef={mainLayoutWrapperRef}
+                gridRef={gridRef}
+                clips={state.clips}
+                setClips={setClips}
+                importToken={importToken}
+                isEmpty={isEmpty}
+                handleExport={handleExport}
+                sideBarEnabled={sideBarEnabled}
+                videoIsHEVC={state.videoIsHEVC}
+                userHasHEVC={userHasHEVC}
+                focusedClip={state.focusedClip}
+                setFocusedClip={setFocusedClip}
+                exportDir={exportDir}
+                onPickExportDir={handlePickExportDir}
+                onExportDirChange={(dir: string) => setExportDir(dir || null)}
+                defaultMergedName={(state.clips[0]?.originalName || "episode") + "_merged"}
+                openedEpisodeId={state.openedEpisodeId}
+                importedVideoPath={state.importedVideoPath}
+                detectionSettings={detectionSettings}
+                onDetectionSettingsChange={setDetectionSettings}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="editor"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="page-motion"
+            >
+              <Menu />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AppLayout>
     </>
