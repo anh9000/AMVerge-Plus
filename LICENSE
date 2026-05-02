@@ -20,6 +20,9 @@ AMVerge Plus includes substantial modifications and additions by anh9000:
 - Audio codec detection and AAC fallback
 - Clip rename panel
 - Multi-platform CI/CD (GitHub Actions)
+- Portable build (no installation required)
+
+More features are added continuously. See CHANGELOG.md for the full history.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
