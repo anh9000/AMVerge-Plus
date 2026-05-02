@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DetectionSettings } from "../utils/episodeUtils";
+import { DetectionSettings, DetectionMode, MODE_SENSITIVITY_DEFAULTS } from "../utils/episodeUtils";
 
 interface DetectionSettingsProps {
   settings: DetectionSettings;
@@ -7,12 +7,32 @@ interface DetectionSettingsProps {
   disabled?: boolean;
 }
 
+const MODES: { value: DetectionMode; label: string; hint: string }[] = [
+  { value: "keyframe",    label: "Keyframe",    hint: "Fast — cuts at I-frames only" },
+  { value: "anime",       label: "Anime",       hint: "dHash + Canny edge analysis" },
+  { value: "live-action", label: "Live-action", hint: "HSV histogram (PySceneDetect)" },
+  { value: "music-video", label: "Music Video", hint: "dHash fast scan, high sensitivity" },
+];
+
 export default function DetectionSettingsPanel({
   settings,
   onChange,
   disabled = false,
 }: DetectionSettingsProps) {
   const [open, setOpen] = useState(false);
+
+  const isKeyframe = settings.mode === "keyframe";
+
+  function handleModeChange(mode: DetectionMode) {
+    onChange({
+      ...settings,
+      mode,
+      // Reset sensitivity to the mode's default when switching.
+      sensitivity: MODE_SENSITIVITY_DEFAULTS[mode],
+      // Snap off by default for music-video (MVs re-encode with many keyframes).
+      snapKeyframes: mode === "music-video" ? false : true,
+    });
+  }
 
   return (
     <div className="ds-wrap">
@@ -31,26 +51,28 @@ export default function DetectionSettingsPanel({
 
       {open && (
         <div className="ds-panel">
+
+          {/* Mode selector */}
           <div className="ds-row">
             <span className="ds-label">Detection mode</span>
-            <div className="ds-mode-btns">
-              <button
-                className={settings.mode === "keyframe" ? "active" : ""}
-                onClick={() => onChange({ ...settings, mode: "keyframe" })}
-                disabled={disabled}
-              >
-                Keyframe
-              </button>
-              <button
-                className={settings.mode === "content" ? "active" : ""}
-                onClick={() => onChange({ ...settings, mode: "content" })}
-                disabled={disabled}
-              >
-                Content-Aware
-              </button>
-            </div>
+            <select
+              className="ds-select"
+              value={settings.mode}
+              onChange={(e) => handleModeChange(e.target.value as DetectionMode)}
+              disabled={disabled}
+            >
+              {MODES.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
           </div>
 
+          {/* Mode hint */}
+          <div className="ds-hint-row">
+            {MODES.find(m => m.value === settings.mode)?.hint}
+          </div>
+
+          {/* Min clip duration — always visible */}
           <div className="ds-row">
             <span className="ds-label">
               Min clip duration
@@ -72,7 +94,8 @@ export default function DetectionSettingsPanel({
             </div>
           </div>
 
-          {settings.mode === "content" && (
+          {/* Sensitivity — hidden for keyframe mode */}
+          {!isKeyframe && (
             <div className="ds-row">
               <span className="ds-label">
                 Sensitivity
@@ -94,6 +117,26 @@ export default function DetectionSettingsPanel({
               </div>
             </div>
           )}
+
+          {/* Snap to keyframes — hidden for keyframe mode */}
+          {!isKeyframe && (
+            <div className="ds-row ds-row-toggle">
+              <span className="ds-label">
+                Snap to keyframes
+                <span className="ds-hint">ensures clean I-frame cuts</span>
+              </span>
+              <button
+                className={`ds-toggle${settings.snapKeyframes ? " active" : ""}`}
+                onClick={() =>
+                  onChange({ ...settings, snapKeyframes: !settings.snapKeyframes })
+                }
+                disabled={disabled}
+              >
+                {settings.snapKeyframes ? "On" : "Off"}
+              </button>
+            </div>
+          )}
+
         </div>
       )}
     </div>

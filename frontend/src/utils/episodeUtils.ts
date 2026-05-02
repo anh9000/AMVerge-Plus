@@ -1,16 +1,28 @@
 import { invoke } from "@tauri-apps/api/core";
 
 // [AMVerge Plus] detection settings type + defaults
+export type DetectionMode = "keyframe" | "live-action" | "anime" | "music-video";
+
 export interface DetectionSettings {
-  mode: "keyframe" | "content";
+  mode: DetectionMode;
   minDuration: number;
   sensitivity: number;
+  snapKeyframes: boolean;
 }
 
 export const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
   mode: "keyframe",
   minDuration: 1.5,
   sensitivity: 27.0,
+  snapKeyframes: true,
+};
+
+// Sensible sensitivity defaults per mode
+export const MODE_SENSITIVITY_DEFAULTS: Record<DetectionMode, number> = {
+  "keyframe": 27.0,
+  "live-action": 27.0,
+  "anime": 20.0,
+  "music-video": 15.0,
 };
 
 export const truncateFileName = (name: string): string => {
@@ -31,6 +43,7 @@ export const detectScenes = async (
       detectionMode: s.mode,
       minDuration: s.minDuration,
       sensitivity: s.sensitivity,
+      snapKeyframes: s.snapKeyframes,
     });
 
     const scenes = JSON.parse(result);
