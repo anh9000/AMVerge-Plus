@@ -830,6 +830,40 @@ async fn remux_video(
 }
 
 // ============================================================================
+// Commands: clip rename
+// ============================================================================
+
+#[derive(serde::Deserialize)]
+struct RenameEntry {
+    old_path: String,
+    new_path: String,
+}
+
+#[tauri::command]
+async fn rename_clips(renames: Vec<RenameEntry>) -> Result<(), String> {
+    for entry in &renames {
+        let old = std::path::Path::new(&entry.old_path);
+        let new_p = std::path::Path::new(&entry.new_path);
+
+        if !old.exists() {
+            return Err(format!("File not found: {}", entry.old_path));
+        }
+
+        std::fs::rename(old, new_p)
+            .map_err(|e| format!("Failed to rename {}: {e}", entry.old_path))?;
+
+        // Rename companion thumbnail if it exists.
+        let old_thumb = old.with_extension("jpg");
+        let new_thumb = new_p.with_extension("jpg");
+        if old_thumb.exists() {
+            let _ = std::fs::rename(&old_thumb, &new_thumb);
+        }
+    }
+
+    Ok(())
+}
+
+// ============================================================================
 // Commands: episode cache cleanup
 // ============================================================================
 
@@ -1787,6 +1821,7 @@ fn main() {
             ensure_preview_proxy,
             delete_episode_cache,
             clear_episode_panel_cache,
+            rename_clips,
             // [AMVerge Plus] — keep these on upstream merge
             check_for_update,
             download_and_apply_update,
