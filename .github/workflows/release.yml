@@ -1,4 +1,4 @@
-name: CI
+name: Release
 
 on:
   push:
@@ -6,42 +6,141 @@ on:
       - "v*"
 
 jobs:
-  check:
-    runs-on: windows-latest
+  release:
+    name: Release (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            python-scripts: Scripts
+          - os: macos-13
+            target: x86_64-apple-darwin
+            python-scripts: bin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            python-scripts: bin
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            python-scripts: bin
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.12"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Install Python deps
+      - name: Setup Python venv (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install av pillow numpy pyinstaller
+          python -m venv backend/venv
+          backend\venv\Scripts\python -m pip install --upgrade pip
+          backend\venv\Scripts\python -m pip install pyinstaller av pillow numpy opencv-python scenedetect
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Python venv (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          python -m venv backend/venv
+          backend/venv/bin/python -m pip install --upgrade pip
+          backend/venv/bin/python -m pip install pyinstaller av pillow numpy opencv-python scenedetect
 
-      - name: Check frontend build
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y
+          New-Item -ItemType Directory -Force backend/bin
+          Copy-Item "C:\ProgramData\chocolatey\bin\ffmpeg.exe" backend/bin/ffmpeg.exe -Force
+          Copy-Item "C:\ProgramData\chocolatey\bin\ffprobe.exe" backend/bin/ffprobe.exe -Force
+
+      - name: Install FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg
+          mkdir -p backend/bin
+          cp "$(which ffmpeg)" backend/bin/ffmpeg
+          cp "$(which ffprobe)" backend/bin/ffprobe
+
+      - name: Install FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          mkdir -p backend/bin
+          cp "$(which ffmpeg)" backend/bin/ffmpeg
+          cp "$(which ffprobe)" backend/bin/ffprobe
+
+      - name: Build Python sidecar
         working-directory: frontend
-        run: npm run build
+        run: node scripts/build-sidecar.mjs
 
-      - name: Check Tauri/Rust build
-        working-directory: frontend/src-tauri
-        run: cargo check
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev
+
+      - name: Import macOS signing cert
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ]; then
+            echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+            security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+            rm certificate.p12
+          else
+            echo "No signing certificate — building unsigned"
+          fi
+
+      - name: Build and release (Tauri)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: "AMVerge Plus ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}
