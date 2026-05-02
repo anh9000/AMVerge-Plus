@@ -41,7 +41,7 @@ export default function Navbar({
     }, []);
 
     return (
-        <div className="navbar has-beam" ref={navbarRef}>
+        <div className="navbar" ref={navbarRef}>
             {/* Left: sidebar toggle + wordmark */}
             <div className="nav-left">
                 <button

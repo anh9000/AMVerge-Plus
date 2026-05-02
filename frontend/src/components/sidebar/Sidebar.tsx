@@ -1,5 +1,6 @@
 // Root sidebar container — import button + EpisodePanel [AMVerge Plus]
 import EpisodePanel from "./episodePanel/EpisodePanel";
+import BorderBeam from "../BorderBeam";
 import type { SidebarProps } from "./types";
 
 export default function Sidebar({
@@ -11,7 +12,8 @@ export default function Sidebar({
   ...episodePanelProps
 }: SidebarProps) {
   return (
-    <div className={`sidebar-container has-beam${sideBarEnabled ? "" : " sidebar-collapsed"}`}>
+    <div className={`sidebar-container${sideBarEnabled ? "" : " sidebar-collapsed"}`}>
+      <BorderBeam />
       <div className="sidebar-import-bar">
         <button
           className="sidebar-import-btn"

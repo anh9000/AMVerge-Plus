@@ -170,75 +170,27 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.36); }
 
 /* ============================================================
-   BORDER BEAM — a short bright streak travelling around the border.
-   Each panel gets its own ::before (beam track) + ::after (beam dot).
-   The streak is a radial glow sliding along the perimeter via
-   offset-path / offset-distance animation.
+   BORDER BEAM — framer-motion glow dot travelling along perimeter
+   .bb-container sits absolute inside the panel (overflow:hidden clips it)
+   .bb-dot is the radial glow moved by JS each frame
    ============================================================ */
-@keyframes beam-travel {
-  0%   { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
-}
-
-.has-beam {
-  position: relative;
-  /* no overflow:visible — panels must not bleed */
-}
-
-/* Faint static border acts as the beam track */
-.has-beam::before {
-  content: '';
+.bb-container {
   position: absolute;
-  inset: -1px;
+  inset: 0;
   border-radius: inherit;
-  border: 1px solid rgba(175, 255, 0, 0.12);
+  overflow: hidden;
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 
-/* The travelling beam streak */
-.has-beam::after {
-  content: '';
+.bb-dot {
   position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 3;
-  background: transparent;
-  /* Beam streak: tight radial glow anchored to border via conic mask */
-  --beam-size: 120px;
-  --beam-angle: 0deg;
-  background-image: conic-gradient(
-    from var(--beam-angle) at 50% 0%,
-    transparent 0deg,
-    rgba(175, 255, 0, 0.0) 340deg,
-    rgba(175, 255, 0, 0.9) 355deg,
-    rgba(255, 255, 255, 1.0) 360deg,
-    rgba(175, 255, 0, 0.9) 365deg,
-    rgba(175, 255, 0, 0.0) 380deg,
-    transparent 400deg
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
-  padding: 1px;
-  animation: border-beam-rotate 4s linear infinite;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  transform: translate(-9999px, -9999px); /* hidden until first frame */
+  will-change: transform;
 }
-
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-@keyframes border-beam-rotate {
-  from { --beam-angle: 0deg; }
-  to   { --beam-angle: 360deg; }
-}
-
-[data-theme="light"] .has-beam::after { opacity: 0.60; }
 
 /* ============================================================
    SMOOTH THEME TRANSITION
