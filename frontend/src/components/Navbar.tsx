@@ -21,11 +21,12 @@ export default function Navbar({
     activePage,
     setActivePage,
 }: NavbarProps) {
-    // Use startDragging() instead of data-tauri-drag-region so buttons still receive clicks
-    const handleNavDrag = async (e: React.MouseEvent<HTMLDivElement>) => {
+    // Use startDragging() instead of data-tauri-drag-region so buttons still receive clicks.
+    // Must NOT be async — startDragging() must fire synchronously during the mousedown event.
+    const handleNavDrag = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         if (target.closest("button, a, input, select")) return;
-        try { await appWin.startDragging(); } catch { /* ignore */ }
+        appWin.startDragging().catch(() => { /* ignore */ });
     };
 
     return (
