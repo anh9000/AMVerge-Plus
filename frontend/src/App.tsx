@@ -224,9 +224,11 @@ function App() {
     }
   }
 
-  // [AMVerge Plus] Theme toggle
+  // [AMVerge Plus] Theme toggle — add transition class for smooth fade
   function handleThemeToggle() {
+    document.documentElement.classList.add("theme-transitioning");
     setIsDarkMode(prev => !prev);
+    setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 400);
   }
 
   // UI handlers
