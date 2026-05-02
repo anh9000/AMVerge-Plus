@@ -35,7 +35,7 @@ export default function Navbar({
             <div className="nav-left">
                 <button
                     className="sidebar-toggle"
-                    onClick={() => setSideBarEnabled(prev => !prev)}
+                    onMouseDown={(e) => { e.stopPropagation(); setSideBarEnabled(prev => !prev); }}
                     title={sideBarEnabled ? "Hide panel" : "Show panel"}
                     aria-label="Toggle sidebar"
                 >
@@ -54,13 +54,13 @@ export default function Navbar({
             <nav className="nav-tabs">
                 <button
                     className={`nav-tab${activePage === "clipping" ? " active" : ""}`}
-                    onClick={() => setActivePage("clipping")}
+                    onMouseDown={(e) => { e.stopPropagation(); setActivePage("clipping"); }}
                 >
                     CLIPPING
                 </button>
                 <button
                     className={`nav-tab${activePage === "editor" ? " active" : ""}`}
-                    onClick={() => setActivePage("editor")}
+                    onMouseDown={(e) => { e.stopPropagation(); setActivePage("editor"); }}
                 >
                     EDITOR
                 </button>
@@ -70,7 +70,7 @@ export default function Navbar({
             <div className="nav-right">
                 <button
                     className="theme-toggle"
-                    onClick={onThemeToggle}
+                    onMouseDown={(e) => { e.stopPropagation(); onThemeToggle(); }}
                     title={isDarkMode ? "Switch to light" : "Switch to dark"}
                     aria-label="Toggle theme"
                 >
@@ -80,11 +80,11 @@ export default function Navbar({
                     }
                 </button>
 
-                {/* Window controls — required because decorations: false */}
+                {/* Window controls — stopPropagation on mousedown so navbar drag handler never fires */}
                 <div className="win-controls">
                     <button
                         className="win-btn win-min"
-                        onClick={() => appWin.minimize()}
+                        onMouseDown={(e) => { e.stopPropagation(); appWin.minimize(); }}
                         title="Minimize"
                         aria-label="Minimize"
                     >
@@ -94,7 +94,7 @@ export default function Navbar({
                     </button>
                     <button
                         className="win-btn win-max"
-                        onClick={() => appWin.toggleMaximize()}
+                        onMouseDown={(e) => { e.stopPropagation(); appWin.toggleMaximize(); }}
                         title="Maximize"
                         aria-label="Maximize"
                     >
@@ -104,7 +104,7 @@ export default function Navbar({
                     </button>
                     <button
                         className="win-btn win-close"
-                        onClick={() => appWin.close()}
+                        onMouseDown={(e) => { e.stopPropagation(); appWin.close(); }}
                         title="Close"
                         aria-label="Close"
                     >
