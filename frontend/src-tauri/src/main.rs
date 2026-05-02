@@ -273,6 +273,7 @@ async fn detect_scenes(
     detection_mode: Option<String>,
     min_duration: Option<f64>,
     sensitivity: Option<f64>,
+    snap_keyframes: Option<bool>,
 ) -> Result<String, String> {
     let vp = std::path::Path::new(&video_path);
     if !vp.exists() || !vp.is_file() {
@@ -280,7 +281,8 @@ async fn detect_scenes(
     }
 
     let mode = detection_mode.as_deref().unwrap_or("keyframe");
-    if mode != "keyframe" && mode != "content" {
+    let valid_modes = ["keyframe", "live-action", "anime", "music-video"];
+    if !valid_modes.contains(&mode) {
         return Err(format!("Invalid detection_mode: {mode}"));
     }
 
@@ -317,6 +319,11 @@ async fn detect_scenes(
     if let Some(sens) = sensitivity {
         extra_args.push("--sensitivity".into());
         extra_args.push(format!("{sens}"));
+    }
+    // snap_keyframes defaults to true in Python; only emit flag when explicitly false.
+    match snap_keyframes {
+        Some(false) => extra_args.push("--no-snap-keyframes".into()),
+        _ => {} // true or None → Python default (on)
     }
 
     let mut child = if cfg!(debug_assertions) {
