@@ -101,10 +101,44 @@ fn sanitize_line_with_known_paths(
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn apply_no_window(cmd: &mut Command) {
-    // Prevent additional console windows from appearing for child processes.
     #[cfg(windows)]
     {
         cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+}
+
+fn exe(name: &str) -> String {
+    if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.to_string()
+    }
+}
+
+fn sidecar_dir_name() -> &'static str {
+    if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
+        "backend_script-x86_64-pc-windows-msvc"
+    } else if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
+        "backend_script-x86_64-apple-darwin"
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "backend_script-aarch64-apple-darwin"
+    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        "backend_script-x86_64-unknown-linux-gnu"
+    } else {
+        "backend_script-unknown"
+    }
+}
+
+fn kill_process_tree(pid: u32) {
+    #[cfg(windows)]
+    {
+        let mut cmd = Command::new("taskkill");
+        apply_no_window(&mut cmd);
+        let _ = cmd.args(["/F", "/T", "/PID", &pid.to_string()]).output();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
     }
 }
 
@@ -295,8 +329,8 @@ async fn detect_scenes(
         let python_path = root
             .join("backend")
             .join("venv")
-            .join("Scripts")
-            .join("python.exe");
+            .join(if cfg!(windows) { "Scripts" } else { "bin" })
+            .join(exe("python"));
 
         let python_name = python_path
             .file_name()
@@ -330,7 +364,7 @@ async fn detect_scenes(
         let backend = app
             .path()
             .resolve(
-                "bin/backend_script-x86_64-pc-windows-msvc/backend_script.exe",
+                format!("bin/{}/{}", sidecar_dir_name(), exe("backend_script")),
                 tauri::path::BaseDirectory::Resource,
             )
             .map_err(|e| e.to_string())?;
@@ -338,7 +372,8 @@ async fn detect_scenes(
         let backend_name = backend
             .file_name()
             .and_then(|x| x.to_str())
-            .unwrap_or("backend_script.exe");
+            .unwrap_or("backend_script")
+            .to_string();
         console_log(
             "SCENE|spawn",
             &format!("mode=prod exe={backend_name} args=[{video_name},{output_dir_base},mode={mode}]"),
@@ -489,23 +524,11 @@ async fn abort_detect_scenes(sidecar_state: State<'_, ActiveSidecar>) -> Result<
 
     console_log("ABORT", &format!("killing process tree pid={pid}"));
 
-    // taskkill /F /T kills the entire process tree (sidecar + ffmpeg children).
-    let result = tokio::task::spawn_blocking(move || {
-        let mut cmd = Command::new("taskkill");
-        apply_no_window(&mut cmd);
-        cmd.args(["/F", "/T", "/PID", &pid.to_string()]).output()
-    })
-    .await
-    .map_err(|e| format!("taskkill task panicked: {e}"))?
-    .map_err(|e| format!("Failed to run taskkill: {e}"))?;
+    tokio::task::spawn_blocking(move || kill_process_tree(pid))
+        .await
+        .map_err(|e| format!("kill task panicked: {e}"))?;
 
-    if result.status.success() {
-        console_log("ABORT", &format!("killed pid={pid} ok"));
-    } else {
-        let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
-        console_log("ABORT", &format!("taskkill pid={pid} failed: {stderr}"));
-    }
-
+    console_log("ABORT", &format!("killed pid={pid}"));
     Ok(())
 }
 
@@ -590,76 +613,90 @@ async fn check_for_update(app: AppHandle) -> Result<UpdateInfo, String> {
 
 #[tauri::command]
 async fn download_and_apply_update(app: AppHandle, download_url: String) -> Result<(), String> {
-    use futures_util::StreamExt;
-    use std::io::Write;
+    #[cfg(windows)]
+    {
+        use futures_util::StreamExt;
+        use std::io::Write;
 
-    let temp_dir = std::env::temp_dir();
-    let zip_path = temp_dir.join("amverge-plus-update.zip");
-    let extract_dir = temp_dir.join("amverge-plus-new");
+        let temp_dir = std::env::temp_dir();
+        let zip_path = temp_dir.join("amverge-plus-update.zip");
+        let extract_dir = temp_dir.join("amverge-plus-new");
 
-    let client = reqwest::Client::builder()
-        .user_agent("AMVerge-Plus-Updater/1.0")
-        .build()
-        .map_err(|e| e.to_string())?;
+        let client = reqwest::Client::builder()
+            .user_agent("AMVerge-Plus-Updater/1.0")
+            .build()
+            .map_err(|e| e.to_string())?;
 
-    let response = client
-        .get(&download_url)
-        .send()
-        .await
-        .map_err(|e| format!("Download failed: {e}"))?;
+        let response = client
+            .get(&download_url)
+            .send()
+            .await
+            .map_err(|e| format!("Download failed: {e}"))?;
 
-    let total = response.content_length().unwrap_or(0);
-    let mut downloaded = 0u64;
-    let mut file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
-    let mut stream = response.bytes_stream();
+        let total = response.content_length().unwrap_or(0);
+        let mut downloaded = 0u64;
+        let mut file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
+        let mut stream = response.bytes_stream();
 
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| format!("Download error: {e}"))?;
-        file.write_all(&chunk).map_err(|e| e.to_string())?;
-        downloaded += chunk.len() as u64;
-        let percent = if total > 0 { (downloaded * 100 / total).min(99) as u8 } else { 0 };
-        let _ = app.emit("update-download-progress", percent);
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| format!("Download error: {e}"))?;
+            file.write_all(&chunk).map_err(|e| e.to_string())?;
+            downloaded += chunk.len() as u64;
+            let percent = if total > 0 { (downloaded * 100 / total).min(99) as u8 } else { 0 };
+            let _ = app.emit("update-download-progress", percent);
+        }
+        drop(file);
+        let _ = app.emit("update-download-progress", 100u8);
+
+        let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let app_dir = current_exe
+            .parent()
+            .ok_or("Cannot determine app directory")?
+            .to_string_lossy()
+            .to_string();
+
+        let zip_str = zip_path.to_string_lossy().to_string();
+        let extract_str = extract_dir.to_string_lossy().to_string();
+        let bat_path = temp_dir.join("amverge-updater.bat");
+
+        let bat = format!(
+            "@echo off\r\n\
+             timeout /t 2 /nobreak >nul\r\n\
+             powershell -command \"Expand-Archive -LiteralPath '{zip}' -DestinationPath '{extract}' -Force\"\r\n\
+             xcopy /E /Y /I \"{extract}\\*\" \"{app}\\\"\r\n\
+             start \"\" \"{app}\\AMVerge Plus.exe\"\r\n\
+             rd /s /q \"{extract}\"\r\n\
+             del \"{zip}\"\r\n\
+             (goto) 2>nul & del \"%~f0\"\r\n",
+            zip = zip_str,
+            extract = extract_str,
+            app = app_dir
+        );
+
+        std::fs::write(&bat_path, bat).map_err(|e| e.to_string())?;
+
+        let mut cmd = Command::new("cmd");
+        apply_no_window(&mut cmd);
+        cmd.args(["/c", "start", "/min", "", &bat_path.to_string_lossy().to_string()])
+            .spawn()
+            .map_err(|e| format!("Failed to launch updater: {e}"))?;
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        app.exit(0);
+
+        Ok(())
     }
-    drop(file);
-    let _ = app.emit("update-download-progress", 100u8);
 
-    let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let app_dir = current_exe
-        .parent()
-        .ok_or("Cannot determine app directory")?
-        .to_string_lossy()
-        .to_string();
-
-    let zip_str = zip_path.to_string_lossy().to_string();
-    let extract_str = extract_dir.to_string_lossy().to_string();
-    let bat_path = temp_dir.join("amverge-updater.bat");
-
-    let bat = format!(
-        "@echo off\r\n\
-         timeout /t 2 /nobreak >nul\r\n\
-         powershell -command \"Expand-Archive -LiteralPath '{zip}' -DestinationPath '{extract}' -Force\"\r\n\
-         xcopy /E /Y /I \"{extract}\\*\" \"{app}\\\"\r\n\
-         start \"\" \"{app}\\AMVerge Plus.exe\"\r\n\
-         rd /s /q \"{extract}\"\r\n\
-         del \"{zip}\"\r\n\
-         (goto) 2>nul & del \"%~f0\"\r\n",
-        zip = zip_str,
-        extract = extract_str,
-        app = app_dir
-    );
-
-    std::fs::write(&bat_path, bat).map_err(|e| e.to_string())?;
-
-    let mut cmd = Command::new("cmd");
-    apply_no_window(&mut cmd);
-    cmd.args(["/c", "start", "/min", "", &bat_path.to_string_lossy().to_string()])
-        .spawn()
-        .map_err(|e| format!("Failed to launch updater: {e}"))?;
-
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    app.exit(0);
-
-    Ok(())
+    #[cfg(not(windows))]
+    {
+        // On macOS/Linux open the download URL in the browser — the user installs manually.
+        #[cfg(target_os = "macos")]
+        let _ = Command::new("open").arg(&download_url).spawn();
+        #[cfg(target_os = "linux")]
+        let _ = Command::new("xdg-open").arg(&download_url).spawn();
+        let _ = (app, download_url);
+        Ok(())
+    }
 }
 
 // ============================================================================
@@ -1671,10 +1708,10 @@ async fn ensure_preview_proxy(
 }
 
 fn resolve_bundled_tool(app: &AppHandle, tool_name: &str) -> Result<PathBuf, String> {
-    // Resolve a bundled tool (ffmpeg/ffprobe) across common resource paths.
-    let exe_name = format!("{tool_name}.exe");
+    let exe_name = exe(tool_name);
+    let sidecar = sidecar_dir_name();
 
-    // 1) Common bundled location: resources/bin/<tool>.exe
+    // 1) resources/bin/<tool>
     if let Ok(p) = app.path().resolve(
         format!("bin/{exe_name}"),
         tauri::path::BaseDirectory::Resource,
@@ -1684,9 +1721,9 @@ fn resolve_bundled_tool(app: &AppHandle, tool_name: &str) -> Result<PathBuf, Str
         }
     }
 
-    // 2) Alternative location if only backend internal <tool> is bundled
+    // 2) Inside the Python sidecar _internal dir
     if let Ok(p) = app.path().resolve(
-        format!("bin/backend_script-x86_64-pc-windows-msvc/_internal/{exe_name}"),
+        format!("bin/{sidecar}/_internal/{exe_name}"),
         tauri::path::BaseDirectory::Resource,
     ) {
         if p.exists() {
@@ -1694,24 +1731,17 @@ fn resolve_bundled_tool(app: &AppHandle, tool_name: &str) -> Result<PathBuf, Str
         }
     }
 
-    // 3) Dev fallback: walk upward looking for ./bin/<tool>.exe
-    // Prefer the backend_script _internal tools (they include more codecs, e.g. software HEVC)
-    // over the plain ./bin/<tool>.exe.
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    if let Some(mut dir) = exe.parent().map(|p| p.to_path_buf()) {
+    // 3) Dev fallback: walk upward from the current exe
+    let current = std::env::current_exe().map_err(|e| e.to_string())?;
+    if let Some(mut dir) = current.parent().map(|p| p.to_path_buf()) {
         for _ in 0..5 {
-            let internal_candidate = dir
-                .join("bin")
-                .join("backend_script-x86_64-pc-windows-msvc")
-                .join("_internal")
-                .join(&exe_name);
-            if internal_candidate.exists() {
-                return Ok(internal_candidate);
+            let internal = dir.join("bin").join(sidecar).join("_internal").join(&exe_name);
+            if internal.exists() {
+                return Ok(internal);
             }
-
-            let candidate = dir.join("bin").join(&exe_name);
-            if candidate.exists() {
-                return Ok(candidate);
+            let plain = dir.join("bin").join(&exe_name);
+            if plain.exists() {
+                return Ok(plain);
             }
             if !dir.pop() {
                 break;
@@ -1720,7 +1750,7 @@ fn resolve_bundled_tool(app: &AppHandle, tool_name: &str) -> Result<PathBuf, Str
     }
 
     Err(format!(
-        "{exe_name} not found (looked in resources/bin, backend _internal, and dev src-tauri/bin)"
+        "{exe_name} not found (looked in resources/bin, {sidecar}/_internal, and dev src-tauri/bin)"
     ))
 }
 
@@ -1736,9 +1766,7 @@ fn main() {
             if let tauri::WindowEvent::Destroyed = event {
                 if let Ok(mut lock) = window.app_handle().state::<ActiveSidecar>().pid.lock() {
                     if let Some(pid) = lock.take() {
-                        let mut cmd = Command::new("taskkill");
-                        apply_no_window(&mut cmd);
-                        let _ = cmd.args(["/F", "/T", "/PID", &pid.to_string()]).output();
+                        kill_process_tree(pid);
                     }
                 }
             }
