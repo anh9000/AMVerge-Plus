@@ -1,14 +1,17 @@
-// build-sidecar.mjs
-//
-// This script builds the Python backend using PyInstaller, bundles required binaries (ffmpeg.exe, ffprobe.exe),
-// and copies the output into the Tauri sidecar bin directory for packaging with the desktop app.
-// It ensures the Tauri app always includes the latest backend and dependencies for distribution.
-// Keep in mind that this is only ran on "npm run tauri build"
-
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
+
+const isWindows = process.platform === "win32";
+const isMac = process.platform === "darwin";
+
+function getTargetTriple() {
+  const arch = process.arch === "arm64" ? "aarch64" : "x86_64";
+  if (isWindows) return `${arch}-pc-windows-msvc`;
+  if (isMac) return `${arch}-apple-darwin`;
+  return `${arch}-unknown-linux-gnu`;
+}
 
 function run(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
@@ -23,32 +26,31 @@ function run(cmd, args, options = {}) {
 }
 
 async function main() {
-  // fetching all the file paths necessary for building to dist
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
   const frontendDir = path.resolve(scriptDir, "..");
   const repoRoot = path.resolve(frontendDir, "..");
   const backendDir = path.join(repoRoot, "backend");
+  const targetTriple = getTargetTriple();
 
-  const pythonExe =
-    process.platform === "win32"
-      ? path.join(backendDir, "venv", "Scripts", "python.exe")
-      : path.join(backendDir, "venv", "bin", "python");
+  const pythonExe = isWindows
+    ? path.join(backendDir, "venv", "Scripts", "python.exe")
+    : path.join(backendDir, "venv", "bin", "python");
+
+  const ffmpegName = isWindows ? "ffmpeg.exe" : "ffmpeg";
+  const ffprobeName = isWindows ? "ffprobe.exe" : "ffprobe";
+  const binarySep = isWindows ? ";" : ":";
+  const exeName = isWindows ? "backend_script.exe" : "backend_script";
 
   const distDir = path.join(backendDir, "dist", "backend_script");
   const tauriSidecarDir = path.join(
     frontendDir,
     "src-tauri",
     "bin",
-    "backend_script-x86_64-pc-windows-msvc"
+    `backend_script-${targetTriple}`
   );
 
-  /*
-  after all file paths are found, we:
-  1) Delete the entire distDir directory (backend_script directory)
-  2) Run the command to build the new backend folder using PyInstaller
-  3) Delete the old contents of sidecar directory and recreate the new one with new build folder
-  */
   await fs.rm(distDir, { recursive: true, force: true });
+
   run(
     pythonExe,
     [
@@ -62,23 +64,23 @@ async function main() {
       "--name",
       "backend_script",
       "--add-binary",
-      "bin/ffmpeg.exe;.",
+      `bin/${ffmpegName}${binarySep}.`,
       "--add-binary",
-      "bin/ffprobe.exe;.",
+      `bin/${ffprobeName}${binarySep}.`,
     ],
     { cwd: backendDir }
   );
+
   await fs.rm(tauriSidecarDir, { recursive: true, force: true });
   await fs.mkdir(tauriSidecarDir, { recursive: true });
   await fs.cp(distDir, tauriSidecarDir, { recursive: true });
 
-  // sanity check: verify expected onedir layout exists
-  const exePath = path.join(tauriSidecarDir, "backend_script.exe");
+  const exePath = path.join(tauriSidecarDir, exeName);
   const baseLib = path.join(tauriSidecarDir, "_internal", "base_library.zip");
 
   try {
     const exeStat = await fs.stat(exePath);
-    if (!exeStat.isFile()) throw new Error("backend_script.exe is not a file");
+    if (!exeStat.isFile()) throw new Error(`${exeName} is not a file`);
     const baseStat = await fs.stat(baseLib);
     if (!baseStat.isFile()) throw new Error("base_library.zip is not a file");
   } catch {
@@ -86,6 +88,8 @@ async function main() {
       `Sidecar sync finished, but required files are missing. Expected ${exePath} and ${baseLib}.`
     );
   }
+
+  console.log(`Sidecar built for ${targetTriple}`);
 }
 
 main().catch((err) => {
