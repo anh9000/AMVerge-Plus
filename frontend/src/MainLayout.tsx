@@ -89,7 +89,7 @@ export default function MainLayout(props: LayoutProps) {
     return (
         <div className="split-layout">
             {/* CENTER: Video player pane */}
-            <div className="player-pane" style={{ width: `${leftWidth}%` }}>
+            <div className="player-pane has-beam" style={{ width: `${leftWidth}%` }}>
                 <PreviewContainer
                     focusedClip={props.focusedClip}
                     focusedClipThumbnail={focusedClipThumbnail}
@@ -114,7 +114,7 @@ export default function MainLayout(props: LayoutProps) {
             </div>
 
             {/* RIGHT: Scene detection results pane */}
-            <div className="clips-pane" style={{ width: `${100 - leftWidth}%` }}>
+            <div className="clips-pane has-beam" style={{ width: `${100 - leftWidth}%` }}>
                 {/* Clips toolbar: detection settings + grid controls */}
                 <div className="clips-toolbar">
                     <DetectionSettingsPanel

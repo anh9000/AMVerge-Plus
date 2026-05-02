@@ -11,7 +11,7 @@ export default function Sidebar({
   ...episodePanelProps
 }: SidebarProps) {
   return (
-    <div className={`sidebar-container${sideBarEnabled ? "" : " sidebar-collapsed"}`}>
+    <div className={`sidebar-container has-beam${sideBarEnabled ? "" : " sidebar-collapsed"}`}>
       <div className="sidebar-import-bar">
         <button
           className="sidebar-import-btn"

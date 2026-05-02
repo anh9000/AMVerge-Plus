@@ -45,14 +45,18 @@
   --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.09);
   --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.20);
 
-  /* Background gradient blob colours (morphed per theme) */
-  --blob-1: rgba(90, 20, 160, 0.65);
-  --blob-2: rgba(20, 35, 130, 0.55);
-  --blob-3: rgba(60, 10, 100, 0.42);
+  /* Background gradient blob colours — lime/green theme */
+  --blob-1: rgba(30, 120, 20, 0.60);
+  --blob-2: rgba(10, 80, 10, 0.50);
+  --blob-3: rgba(100, 200, 0, 0.25);
+
+  /* Border beam colours */
+  --beam-color-1: rgba(175, 255, 0, 0.90);
+  --beam-color-2: rgba(80, 220, 20, 0.70);
 
   /* Focused clip glow */
-  --glow-focus-a: rgba(110, 90, 200, 0.38);
-  --glow-focus-b: rgba(130, 110, 220, 0.55);
+  --glow-focus-a: rgba(120, 220, 0, 0.35);
+  --glow-focus-b: rgba(160, 255, 0, 0.50);
 
   /* Layout */
   --navbar-h:    44px;
@@ -108,9 +112,9 @@
   --glass-sheen:  inset 0 1px 0 rgba(255, 255, 255, 0.96);
   --glass-shadow: 0 20px 60px rgba(100, 80, 180, 0.18), 0 4px 16px rgba(0, 0, 0, 0.10);
 
-  --blob-1: rgba(120, 80, 220, 0.50);
-  --blob-2: rgba(60, 120, 255, 0.42);
-  --blob-3: rgba(180, 100, 240, 0.38);
+  --blob-1: rgba(60, 160, 20, 0.45);
+  --blob-2: rgba(100, 200, 10, 0.35);
+  --blob-3: rgba(175, 255, 0, 0.22);
 
   --glow-focus-a: rgba(100, 80, 190, 0.28);
   --glow-focus-b: rgba(120, 100, 210, 0.42);
@@ -164,6 +168,55 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: rgba(128, 128, 128, 0.18); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.36); }
+
+/* ============================================================
+   BORDER BEAM — animated lime highlight sweeping around panels
+   Usage: add class "has-beam" to any glass panel element.
+   A pseudo conic-gradient rotates continuously inside the border.
+   ============================================================ */
+@keyframes border-beam-spin {
+  0%   { --beam-angle: 0deg; }
+  100% { --beam-angle: 360deg; }
+}
+
+@property --beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.has-beam {
+  position: relative;
+}
+
+.has-beam::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0%,
+    transparent 30%,
+    var(--beam-color-1) 48%,
+    var(--beam-color-2) 52%,
+    transparent 70%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  animation: border-beam-spin 3.5s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.75;
+}
+
+/* Beam is dimmer on light panels */
+[data-theme="light"] .has-beam::before { opacity: 0.55; }
 
 /* ============================================================
    SMOOTH THEME TRANSITION
