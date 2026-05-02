@@ -437,6 +437,7 @@ function App() {
             mainLayoutWrapperRef={mainLayoutWrapperRef}
             gridRef={gridRef}
             clips={state.clips}
+            setClips={setClips}
             importToken={importToken}
             isEmpty={isEmpty}
             handleExport={handleExport}

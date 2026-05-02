@@ -1,6 +1,7 @@
 import ImportButtons from "../components/ImportButtons";
 import MainLayout from "../MainLayout";
 import { fileNameFromPath, DetectionSettings } from "../utils/episodeUtils";
+import { ClipItem } from "../types/domain";
 
 interface HomePageProps {
   cols: number;
@@ -15,7 +16,8 @@ interface HomePageProps {
   onImportClick: () => void;
   loading: boolean;
   mainLayoutWrapperRef: React.RefObject<HTMLDivElement | null>;
-  clips: { id: string; src: string; thumbnail: string; originalName?: string }[];
+  clips: ClipItem[];
+  setClips: (clips: ClipItem[]) => void;
   importToken: string;
   isEmpty: boolean;
   handleExport: (
@@ -53,6 +55,7 @@ export default function HomePage({
   loading,
   mainLayoutWrapperRef,
   clips,
+  setClips,
   importToken,
   isEmpty,
   handleExport,
@@ -85,6 +88,8 @@ export default function HomePage({
         loading={loading}
         detectionSettings={detectionSettings}
         onDetectionSettingsChange={onDetectionSettingsChange}
+        clips={clips}
+        onClipsRenamed={setClips}
       />
 
       <div className="main-layout-wrapper" ref={mainLayoutWrapperRef}>
