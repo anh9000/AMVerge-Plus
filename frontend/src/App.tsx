@@ -446,6 +446,8 @@ function App() {
         onThemeToggle: handleThemeToggle,
         activePage,
         setActivePage,
+        onImportClick,
+        isLoading: loading,
       }}
       dividerProps={{
         onPointerDown: startSidebarResize,

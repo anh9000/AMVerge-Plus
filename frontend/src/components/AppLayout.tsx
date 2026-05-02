@@ -33,50 +33,48 @@ export default function AppLayout({
       size="md"
       colorVariant="colorful"
       theme={isDarkMode ? "dark" : "light"}
-      duration={5}
-      strength={0.65}
+      duration={4}
+      strength={1}
       borderRadius={14}
-      className="app-root"
+      className="app-beam"
     >
-      {loadingOverlay}
-      {isDragging && (
-        <div className="dragging-overlay">
-          <h1>Drag file(s) here.</h1>
-        </div>
-      )}
+      <main className="app-root">
+        {loadingOverlay}
+        {isDragging && (
+          <div className="dragging-overlay">
+            <h1>Drag file(s) here.</h1>
+          </div>
+        )}
 
-      {/* Full-width floating navbar pill */}
-      <Navbar {...navbarProps} />
+        <Navbar {...navbarProps} />
 
-      {/* Body: sidebar + content */}
-      <div
-        className="window-wrapper"
-        ref={windowWrapperRef}
-        style={{
-          ["--amverge-sidebar-width" as any]: `${dividerProps.sidebarWidthPx}px`,
-          ["--amverge-divider-offset" as any]: `${dividerProps.dividerOffsetPx}px`,
-        }}
-      >
-        {/* Sidebar — always in DOM; CSS class drives collapse animation */}
-        <Sidebar {...sidebarProps} />
-
-        {/* Resize handle — invisible gap; hidden by CSS when sidebar collapsed */}
         <div
-          className="divider sidebar-splitter"
-          onPointerDown={dividerProps.onPointerDown}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          tabIndex={-1}
+          className="window-wrapper"
+          ref={windowWrapperRef}
+          style={{
+            ["--amverge-sidebar-width" as any]: `${dividerProps.sidebarWidthPx}px`,
+            ["--amverge-divider-offset" as any]: `${dividerProps.dividerOffsetPx}px`,
+          }}
         >
-          <span className="subdivider" />
-          <span className="subdivider" />
-        </div>
+          <Sidebar {...sidebarProps} />
 
-        <div className="content-wrapper">
-          {children}
+          <div
+            className="divider sidebar-splitter"
+            onPointerDown={dividerProps.onPointerDown}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            tabIndex={-1}
+          >
+            <span className="subdivider" />
+            <span className="subdivider" />
+          </div>
+
+          <div className="content-wrapper">
+            {children}
+          </div>
         </div>
-      </div>
+      </main>
     </BorderBeam>
   );
 }
