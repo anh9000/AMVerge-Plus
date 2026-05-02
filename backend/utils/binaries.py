@@ -12,12 +12,24 @@ else:
 def get_binary(name: str) -> str:
     """Return the path to a bundled binary like ffmpeg/ffprobe.
 
+    Normalises the name for the current platform: adds .exe on Windows,
+    strips it on Linux/macOS.  Callers may pass either form.
+
     Supports:
-    - dev layout: backend/bin/ffmpeg.exe
-    - older dev layout: backend/ffmpeg.exe
+    - dev layout: backend/bin/ffmpeg[.exe]
+    - older dev layout: backend/ffmpeg[.exe]
     - PyInstaller onedir: dist folder + _internal
     - PATH fallback
     """
+    import sys as _sys
+
+    # Normalise name for the current platform.
+    if _sys.platform == "win32":
+        if not name.endswith(".exe"):
+            name = name + ".exe"
+    else:
+        if name.endswith(".exe"):
+            name = name[:-4]
 
     candidates = [
         ROOT / "bin" / name,
